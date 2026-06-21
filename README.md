@@ -199,7 +199,7 @@ mongodb+srv://app_user:<PASSWORD>@toddler-monitoring-clus.nccnda5.mongodb.net/to
 
 Allowlist:
 
-- EC2: `18.139.192.254/32`
+- EC2 host IP is managed in the deployment environment
 - Local development IP (`/32`)
 
 ## Deployment (Shared EC2, Domain-Isolated)
