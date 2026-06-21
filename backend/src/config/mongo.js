@@ -1,14 +1,53 @@
 const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const { env } = require('./env');
 
-async function connectMongo() {
-  if (!env.mongodbUri) {
+let memoryServer = null;
+let connectionMode = null;
+
+async function connectMongo({ allowMemoryFallback = false } = {}) {
+  if (mongoose.connection.readyState === 1) {
+    return connectionMode || 'connected';
+  }
+
+  if (env.mongodbUri) {
+    try {
+      await mongoose.connect(env.mongodbUri, {
+        serverSelectionTimeoutMS: 10000
+      });
+      connectionMode = 'uri';
+      return connectionMode;
+    } catch (error) {
+      if (!allowMemoryFallback || env.nodeEnv === 'production') {
+        throw error;
+      }
+      console.warn(`MongoDB connection failed, falling back to in-memory mode. Reason: ${error.message}`);
+    }
+  } else if (!allowMemoryFallback || env.nodeEnv === 'production') {
     throw new Error('Missing MONGODB_URI environment variable.');
   }
 
-  await mongoose.connect(env.mongodbUri, {
+  if (!memoryServer) {
+    memoryServer = await MongoMemoryServer.create();
+  }
+
+  await mongoose.connect(memoryServer.getUri(), {
     serverSelectionTimeoutMS: 10000
   });
+  connectionMode = 'memory';
+  return connectionMode;
 }
 
-module.exports = { connectMongo };
+function getMongoConnectionMode() {
+  return connectionMode;
+}
+
+async function closeMongoMemoryServer() {
+  if (memoryServer) {
+    await memoryServer.stop();
+    memoryServer = null;
+    connectionMode = null;
+  }
+}
+
+module.exports = { connectMongo, closeMongoMemoryServer, getMongoConnectionMode };

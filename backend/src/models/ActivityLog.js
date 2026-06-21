@@ -6,7 +6,7 @@ const ActivityLogSchema = new mongoose.Schema(
     childId: { type: mongoose.Schema.Types.ObjectId, ref: 'Child', required: true, index: true },
     activityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Activity', required: true },
     completedAt: { type: Date, required: true, index: true },
-    durationMinutes: { type: Number, required: true, min: 0, max: 240 },
+    durationMinutes: { type: Number, required: true, min: 1, max: 240 },
     successLevel: {
       type: String,
       required: true,

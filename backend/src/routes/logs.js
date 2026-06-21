@@ -4,8 +4,29 @@ const Activity = require('../models/Activity');
 const ActivityLog = require('../models/ActivityLog');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { getChildForParent } = require('../utils/ownership');
+const { calculateAgeInMonths } = require('../utils/age');
 
 const router = express.Router();
+const successLevels = ['needs_help', 'partial', 'completed', 'mastered'];
+
+function validateLogInput({ durationMinutes, parentConfidence, successLevel }) {
+  const duration = Number(durationMinutes);
+  const confidence = Number(parentConfidence);
+
+  if (!Number.isFinite(duration) || duration < 1 || duration > 240) {
+    throw createError(400, 'durationMinutes must be a number between 1 and 240.');
+  }
+
+  if (!Number.isFinite(confidence) || confidence < 1 || confidence > 5) {
+    throw createError(400, 'parentConfidence must be a number between 1 and 5.');
+  }
+
+  if (!successLevels.includes(successLevel)) {
+    throw createError(400, 'successLevel must be needs_help, partial, completed, or mastered.');
+  }
+
+  return { duration, confidence };
+}
 
 router.post(
   '/',
@@ -20,23 +41,34 @@ router.post(
       notes = ''
     } = req.body;
 
-    if (!childId || !activityId || !durationMinutes || !successLevel || !parentConfidence) {
+    if (
+      !childId ||
+      !activityId ||
+      durationMinutes === undefined ||
+      !successLevel ||
+      parentConfidence === undefined
+    ) {
       throw createError(
         400,
         'childId, activityId, durationMinutes, successLevel, and parentConfidence are required.'
       );
     }
 
-    await getChildForParent(childId, req.user.parent._id);
+    const { duration, confidence } = validateLogInput({ durationMinutes, parentConfidence, successLevel });
+    const child = await getChildForParent(childId, req.user.parent._id);
+    const parsedCompletedAt = new Date(completedAt);
+    if (Number.isNaN(parsedCompletedAt.getTime())) {
+      throw createError(400, 'Invalid completedAt value.');
+    }
 
     const activity = await Activity.findOne({ _id: activityId, isActive: true });
     if (!activity) {
       throw createError(404, 'Activity not found.');
     }
 
-    const parsedCompletedAt = new Date(completedAt);
-    if (Number.isNaN(parsedCompletedAt.getTime())) {
-      throw createError(400, 'Invalid completedAt value.');
+    const ageInMonths = calculateAgeInMonths(child.dateOfBirth, parsedCompletedAt);
+    if (ageInMonths < activity.ageBandMinMonths || ageInMonths > activity.ageBandMaxMonths) {
+      throw createError(400, 'Activity is outside the selected child age band.');
     }
 
     const log = await ActivityLog.create({
@@ -44,9 +76,9 @@ router.post(
       childId,
       activityId,
       completedAt: parsedCompletedAt,
-      durationMinutes: Number(durationMinutes),
+      durationMinutes: duration,
       successLevel,
-      parentConfidence: Number(parentConfidence),
+      parentConfidence: confidence,
       notes: String(notes).trim()
     });
 

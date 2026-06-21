@@ -1,4 +1,5 @@
 const express = require('express');
+const createError = require('http-errors');
 const WeeklyReport = require('../models/WeeklyReport');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { getChildForParent } = require('../utils/ownership');
@@ -10,6 +11,9 @@ router.post(
   '/generate-weekly',
   asyncHandler(async (req, res) => {
     const { childId } = req.body;
+    if (!childId) {
+      throw createError(400, 'childId is required.');
+    }
 
     await getChildForParent(childId, req.user.parent._id);
 

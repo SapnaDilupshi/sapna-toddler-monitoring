@@ -18,13 +18,15 @@ app.use(
         callback(null, true);
         return;
       }
-      callback(new Error(`CORS origin not allowed: ${origin}`));
+      const error = new Error(`CORS origin not allowed: ${origin}`);
+      error.status = 403;
+      callback(error);
     },
     credentials: true
   })
 );
 app.use(express.json({ limit: '1mb' }));
-app.use(morgan('dev'));
+app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 
 app.use('/api', routes);
 app.use(notFound);

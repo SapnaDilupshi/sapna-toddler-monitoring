@@ -3,6 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AuthPage from '../AuthPage';
 import DashboardPage from '../DashboardPage';
+import CognitiveGamePage from '../games/CognitiveGamePage';
+import MotorGamePage from '../games/MotorGamePage';
+import LanguageGamePage from '../games/LanguageGamePage';
+import SocialEmotionalGamePage from '../games/SocialEmotionalGamePage';
 
 let mockAuthState;
 const apiRequestMock = vi.fn();
@@ -146,14 +150,84 @@ function buildDashboardApiMock({ consentAccepted, role = 'parent' }) {
       return {
         activities: [
           {
-            _id: 'activity-1',
-            title: 'Stack blocks',
-            description: 'Practice stacking two safe blocks.',
+            _id: 'activity-cognitive-12',
+            title: 'Find The Hidden Toy',
+            description: 'Find the hidden toy.',
+            domain: 'cognitive',
+            ageBandMinMonths: 12,
+            ageBandMaxMonths: 17,
+            estimatedMinutes: 7,
+            instructions: ['Show the toy.', 'Hide it.', 'Celebrate discovery.']
+          },
+          {
+            _id: 'activity-cognitive-24',
+            title: 'Shape Sort',
+            description: 'Tap the matching shape.',
+            domain: 'cognitive',
+            ageBandMinMonths: 24,
+            ageBandMaxMonths: 29,
+            estimatedMinutes: 8,
+            instructions: ['Show the target shape.', 'Tap the right answer.', 'Celebrate success.']
+          },
+          {
+            _id: 'activity-motor-12',
+            title: 'Stack Two Blocks',
+            description: 'Stack two blocks.',
+            domain: 'motor',
+            ageBandMinMonths: 12,
+            ageBandMaxMonths: 17,
+            estimatedMinutes: 6,
+            instructions: ['Demonstrate once.', 'Offer blocks.', 'Track attempts.']
+          },
+          {
+            _id: 'activity-motor-24',
+            title: 'Step Path',
+            description: 'Finish the movement path.',
             domain: 'motor',
             ageBandMinMonths: 24,
             ageBandMaxMonths: 29,
-            estimatedMinutes: 10,
-            instructions: ['Show the blocks.', 'Invite the child to stack.', 'Praise attempts.']
+            estimatedMinutes: 9,
+            instructions: ['Point to the path.', 'Tap the final step.', 'Rest between rounds.']
+          },
+          {
+            _id: 'activity-language-12',
+            title: 'Name Familiar Objects',
+            description: 'Name familiar objects.',
+            domain: 'language',
+            ageBandMinMonths: 12,
+            ageBandMaxMonths: 17,
+            estimatedMinutes: 7,
+            instructions: ['Use household items.', 'Repeat names.', 'Encourage imitation.']
+          },
+          {
+            _id: 'activity-language-24',
+            title: 'Word Match',
+            description: 'Match the spoken word.',
+            domain: 'language',
+            ageBandMinMonths: 24,
+            ageBandMaxMonths: 29,
+            estimatedMinutes: 9,
+            instructions: ['Say the word.', 'Tap the matching picture.', 'Repeat once more.']
+          },
+          {
+            _id: 'activity-social-12',
+            title: 'Peek-a-boo Interaction',
+            description: 'Practice turn-taking through peek-a-boo.',
+            domain: 'social_emotional',
+            ageBandMinMonths: 12,
+            ageBandMaxMonths: 17,
+            estimatedMinutes: 6,
+            instructions: ['Make eye contact.', 'Alternate turns.', 'Observe response.']
+          },
+          {
+            _id: 'activity-social-24',
+            title: 'Feelings Match',
+            description: 'Pick the happy face.',
+            domain: 'social_emotional',
+            ageBandMinMonths: 24,
+            ageBandMaxMonths: 29,
+            estimatedMinutes: 8,
+            instructions: ['Name the feeling.', 'Tap the matching face.', 'Give praise.']
           }
         ]
       };
@@ -254,6 +328,10 @@ async function openTab(name) {
   await userEvent.click(await screen.findByRole('button', { name }));
 }
 
+function setGameRoute(path) {
+  window.history.pushState({}, '', path);
+}
+
 describe('frontend smoke flows', () => {
   beforeEach(() => {
     mockAuthState = {
@@ -314,8 +392,8 @@ describe('frontend smoke flows', () => {
     render(<DashboardPage />);
 
     await screen.findByText(/Parental Consent Required/i);
-    await openTab(/^Children$/i);
-    expect(screen.getByRole('button', { name: /Save Activity Log/i })).toBeDisabled();
+    await openTab(/^Activities$/i);
+    expect(screen.getAllByRole('link', { name: /Play .* game/i })).toHaveLength(4);
     await openTab(/^Reports$/i);
     expect(screen.getByRole('button', { name: /Generate Weekly Report/i })).toBeDisabled();
 
@@ -339,10 +417,17 @@ describe('frontend smoke flows', () => {
     ).toBeGreaterThan(0);
 
     await openTab(/^Activities$/i);
-    expect(await screen.findByText(/Guided Activity Library/i)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Plan This Activity/i }));
+    expect(await screen.findByText(/Four polished games/i)).toBeInTheDocument();
+    expect(screen.getByText(/One calm auto-log flow/i)).toBeInTheDocument();
+    const openGameLinks = screen.getAllByRole('link', { name: /Play .* game/i });
+    expect(openGameLinks).toHaveLength(4);
+    expect(openGameLinks[0].getAttribute('href')).toContain('/games/cognitive');
+    expect(openGameLinks[1].getAttribute('href')).toContain('/games/motor');
+    expect(openGameLinks[2].getAttribute('href')).toContain('/games/language');
+    expect(openGameLinks[3].getAttribute('href')).toContain('/games/social_emotional');
 
     await openTab(/^Children$/i);
+    expect(screen.queryByText(/Log Offline Activity/i)).not.toBeInTheDocument();
     await userEvent.type(screen.getAllByLabelText(/Nickname/i)[0], 'Nia');
     await userEvent.type(screen.getAllByLabelText(/Date of Birth/i)[0], '2024-06-01');
     await userEvent.click(screen.getByRole('button', { name: /Save Child Profile/i }));
@@ -357,9 +442,6 @@ describe('frontend smoke flows', () => {
       );
     });
 
-    await userEvent.clear(screen.getByLabelText(/Logged Duration \(minutes\)/i));
-    await userEvent.type(screen.getByLabelText(/Logged Duration \(minutes\)/i), '15');
-    await userEvent.click(screen.getByRole('button', { name: /Save Activity Log/i }));
     await userEvent.click(screen.getByRole('button', { name: /^Delete$/i }));
     await waitFor(() => {
       expect(apiRequestMock).toHaveBeenCalledWith(
@@ -413,6 +495,128 @@ describe('frontend smoke flows', () => {
     await openTab(/^About$/i);
     expect(screen.getByText(/Parent-mediated toddler monitoring/i)).toBeInTheDocument();
     expect(screen.getByText(/ML Methodology/i)).toBeInTheDocument();
+  });
+
+  it('opens the cognitive game in a dedicated page and auto-logs on completion', async () => {
+    apiRequestMock.mockImplementation(buildDashboardApiMock({ consentAccepted: true }));
+    setGameRoute('/games/cognitive?childId=child-1&childName=Ari&childAge=24&activityId=activity-cognitive-24');
+    render(<CognitiveGamePage />);
+
+    expect(await screen.findByText(/Color Rack Match/i)).toBeInTheDocument();
+    const clickBall = async (name) => {
+      await userEvent.click(within(screen.getByLabelText(/playboard/i)).getByRole('button', { name }));
+    };
+
+    await clickBall('4');
+    await clickBall('5');
+    await clickBall('6');
+    await clickBall('3');
+    await clickBall('3');
+    await clickBall('4');
+    await clickBall('1');
+    await clickBall('3');
+
+    await waitFor(() => {
+      expect(apiRequestMock).toHaveBeenCalledWith(
+        '/logs',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.objectContaining({
+            childId: 'child-1',
+            activityId: 'activity-cognitive-24',
+            successLevel: 'mastered',
+            durationMinutes: expect.any(Number),
+            parentConfidence: 5
+          })
+        })
+      );
+    });
+  });
+
+  it('opens the motor game in a dedicated page and auto-logs on completion', async () => {
+    apiRequestMock.mockImplementation(buildDashboardApiMock({ consentAccepted: true }));
+    setGameRoute('/games/motor?childId=child-1&childName=Ari&childAge=24&activityId=activity-motor-24');
+    render(<MotorGamePage />);
+
+    expect(await screen.findByText(/Trail Chase/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Drum/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Sun/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Cloud/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Moon/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Leaf/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Drum/i }));
+
+    await waitFor(() => {
+      expect(apiRequestMock).toHaveBeenCalledWith(
+        '/logs',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.objectContaining({
+            childId: 'child-1',
+            activityId: 'activity-motor-24',
+            successLevel: 'mastered',
+            durationMinutes: 8,
+            parentConfidence: 5
+          })
+        })
+      );
+    });
+  });
+
+  it('opens the language game in a dedicated page and auto-logs on completion', async () => {
+    apiRequestMock.mockImplementation(buildDashboardApiMock({ consentAccepted: true }));
+    setGameRoute('/games/language?childId=child-1&childName=Ari&childAge=24&activityId=activity-language-24');
+    render(<LanguageGamePage />);
+
+    expect(await screen.findByText(/Picture Word Match/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Cat/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Book/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Moon/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Cup/i }));
+
+    await waitFor(() => {
+      expect(apiRequestMock).toHaveBeenCalledWith(
+        '/logs',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.objectContaining({
+            childId: 'child-1',
+            activityId: 'activity-language-24',
+            successLevel: 'mastered',
+            durationMinutes: 9,
+            parentConfidence: 5
+          })
+        })
+      );
+    });
+  });
+
+  it('opens the social-emotional game in a dedicated page and auto-logs on completion', async () => {
+    apiRequestMock.mockImplementation(buildDashboardApiMock({ consentAccepted: true }));
+    setGameRoute('/games/social_emotional?childId=child-1&childName=Ari&childAge=24&activityId=activity-social-24');
+    render(<SocialEmotionalGamePage />);
+
+    expect(await screen.findByText(/Helping Hands Stage/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Share the blocks/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Offer help/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Wait patiently/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Ask for help/i }));
+
+    await waitFor(() => {
+      expect(apiRequestMock).toHaveBeenCalledWith(
+        '/logs',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.objectContaining({
+            childId: 'child-1',
+            activityId: 'activity-social-24',
+            successLevel: 'mastered',
+            durationMinutes: 10,
+            parentConfidence: 5
+          })
+        })
+      );
+    });
   });
 
   it('shows admin tab and supports core admin management for admin users', async () => {

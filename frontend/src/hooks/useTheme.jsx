@@ -4,18 +4,31 @@ const THEME_KEY = 'sapna-ui-theme';
 const ThemeContext = createContext(null);
 
 function getInitialTheme() {
-  const stored = localStorage.getItem(THEME_KEY);
-  if (stored === 'light' || stored === 'dark') {
-    return stored;
+  if (typeof window === 'undefined') {
+    return 'light';
   }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+  try {
+    const stored = window.localStorage?.getItem(THEME_KEY);
+    if (stored === 'light' || stored === 'dark') {
+      return stored;
+    }
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(getInitialTheme);
 
   useEffect(() => {
-    localStorage.setItem(THEME_KEY, theme);
+    try {
+      window.localStorage?.setItem(THEME_KEY, theme);
+    } catch {
+      // Theme still applies for the current session if persistence is blocked.
+    }
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 

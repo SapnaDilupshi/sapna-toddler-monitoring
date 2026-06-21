@@ -1,7 +1,9 @@
 const { app } = require('./app');
 const { env } = require('./config/env');
-const { connectMongo } = require('./config/mongo');
+const { connectMongo, closeMongoMemoryServer } = require('./config/mongo');
 const { initializeFirebase, isFirebaseConfigured } = require('./config/firebase');
+const Activity = require('./models/Activity');
+const { ACTIVITY_SEED } = require('./scripts/seedActivities');
 const mongoose = require('mongoose');
 
 let httpServer = null;
@@ -14,12 +16,41 @@ async function connectMongoWithRetry() {
   }
 
   try {
-    await connectMongo();
-    console.log('MongoDB connection established.');
+    const mode = await connectMongo({ allowMemoryFallback: env.nodeEnv !== 'production' });
+    console.log(`MongoDB connection established (${mode}).`);
+    await seedDefaultActivitiesIfNeeded(mode);
   } catch (error) {
-    console.error(`MongoDB connection failed. Retrying in 15s. Reason: ${error.message}`);
+    if (env.nodeEnv === 'production') {
+      console.error(`MongoDB connection failed. Retrying in 15s. Reason: ${error.message}`);
+      mongoRetryTimer = setTimeout(connectMongoWithRetry, 15000);
+      return;
+    }
+
+    console.error(`MongoDB connection failed in development. Retrying in 15s. Reason: ${error.message}`);
     mongoRetryTimer = setTimeout(connectMongoWithRetry, 15000);
   }
+}
+
+async function seedDefaultActivitiesIfNeeded(mode) {
+  if (env.nodeEnv === 'production') {
+    return;
+  }
+
+  const total = await Activity.countDocuments();
+  if (total > 0) {
+    return;
+  }
+
+  for (const activity of ACTIVITY_SEED) {
+    await Activity.findOneAndUpdate(
+      { code: activity.code },
+      { $set: activity },
+      { upsert: true, new: true }
+    );
+  }
+
+  const seededTotal = await Activity.countDocuments();
+  console.log(`Seeded ${seededTotal} default activities in ${mode} mode.`);
 }
 
 async function closeMongoConnection() {
@@ -57,6 +88,7 @@ function setupGracefulShutdown() {
       }
 
       await closeMongoConnection();
+      await closeMongoMemoryServer();
       clearTimeout(forceExitTimer);
       process.exit(0);
     } catch (error) {
