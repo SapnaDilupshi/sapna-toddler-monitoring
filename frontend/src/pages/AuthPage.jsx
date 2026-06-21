@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 
 export default function AuthPage() {
   const { login, signup, configError } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '' });
   const [pending, setPending] = useState(false);
@@ -38,12 +40,22 @@ export default function AuthPage() {
 
   return (
     <main className="app-shell auth-shell">
+      <section className="theme-row auth-theme-row">
+        <button className="theme-toggle-btn" type="button" onClick={toggleTheme}>
+          {theme === 'dark' ? 'Switch To Light' : 'Switch To Dark'}
+        </button>
+      </section>
+
       <section className="hero-card">
         <p className="eyebrow">Parent-Centric Monitoring</p>
         <h1>SAPNA Toddler Development Dashboard</h1>
         <p>
           Track offline milestone activities, log developmental observations, and receive
           personalized weekly progress insights without increasing toddler screen exposure.
+        </p>
+        <p className="medical-disclaimer-inline">
+          Medical Disclaimer: SAPNA is a screening and monitoring aid, not a medical diagnosis.
+          Always consult a qualified healthcare professional for formal assessment.
         </p>
         <ul>
           <li>Guided activities mapped to 12-36 month milestones</li>
