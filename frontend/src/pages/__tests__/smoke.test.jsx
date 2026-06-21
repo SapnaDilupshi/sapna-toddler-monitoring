@@ -43,12 +43,29 @@ function buildDashboardApiMock({ consentAccepted }) {
         weekStart: '2026-04-01T00:00:00.000Z',
         status: 'needs_monitoring',
         summary: 'Summary text',
-        reportDisclaimer: 'Screening only. Not a diagnosis.'
+        reportDisclaimer: 'Screening only. Not a diagnosis.',
+        predictionSource: 'ml',
+        predictionConfidence: 0.82,
+        modelVersion: 'sapna-ml-test',
+        classProbabilities: {
+          on_track: 0.14,
+          needs_monitoring: 0.82,
+          at_risk: 0.04
+        },
+        topRiskFactors: ['Language-focused activities appear below the expected range for this age.']
       }
     ]
   };
 
   return async (path, { method = 'GET' } = {}) => {
+    if (path === '/health') {
+      return {
+        ok: true,
+        mlServiceReachable: true,
+        mlModelVersion: 'sapna-ml-test',
+        mlServiceEnabled: true
+      };
+    }
     if (path === '/auth/me') {
       return { parent: { email: 'main@example.com' } };
     }
@@ -112,7 +129,8 @@ function buildDashboardApiMock({ consentAccepted }) {
             social_emotional: 0
           }
         },
-        latestReport: state.reports[0]
+        latestReport: state.reports[0],
+        medicalDisclaimer: 'Medical Disclaimer: Screening only. Not a diagnosis.'
       };
     }
     if (path.startsWith('/reports?')) {
@@ -194,14 +212,21 @@ describe('frontend smoke flows', () => {
 
     const disclaimerMatches = await screen.findAllByText(/Medical Disclaimer:/i);
     expect(disclaimerMatches.length).toBeGreaterThan(0);
-    expect(screen.getByText(/Screening only. Not a diagnosis./i)).toBeInTheDocument();
+    expect(await screen.findByText(/Model Online/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/sapna-ml-test/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Screening only. Not a diagnosis./i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/ML Screening/i).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/Language-focused activities appear below the expected range for this age./i)
+        .length
+    ).toBeGreaterThan(0);
 
     await userEvent.type(screen.getByLabelText(/Nickname/i), 'Nia');
     await userEvent.type(screen.getByLabelText(/Date of Birth/i), '2024-06-01');
     await userEvent.click(screen.getByRole('button', { name: /Save Child Profile/i }));
 
-    await userEvent.clear(screen.getByLabelText(/Duration \(minutes\)/i));
-    await userEvent.type(screen.getByLabelText(/Duration \(minutes\)/i), '15');
+    await userEvent.clear(screen.getByLabelText(/Logged Duration \(minutes\)/i));
+    await userEvent.type(screen.getByLabelText(/Logged Duration \(minutes\)/i), '15');
     await userEvent.click(screen.getByRole('button', { name: /Save Activity Log/i }));
 
     await userEvent.click(screen.getByRole('button', { name: /Generate Weekly Report/i }));
