@@ -1484,6 +1484,65 @@ progress {
   border-left: 4px solid var(--danger);
 }
 
+.game-finish-card {
+  min-height: 420px;
+  display: grid;
+  gap: 0.9rem;
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+  padding: 1.6rem;
+}
+
+.game-finish-icon {
+  width: 88px;
+  height: 88px;
+  border-radius: 28px;
+  display: grid;
+  place-items: center;
+  font-size: 2.5rem;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.game-finish-card h2 {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+}
+
+.game-finish-card p {
+  max-width: 28rem;
+  margin: 0;
+}
+
+.game-finish-state {
+  width: min(100%, 24rem);
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-3), transparent 6%);
+}
+
+.game-finish-state span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+
+.game-finish-state strong {
+  font-size: 0.98rem;
+}
+
+.game-finish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: center;
+}
+
 .game-stage {
   position: relative;
   z-index: 1;

@@ -531,6 +531,8 @@ describe('frontend smoke flows', () => {
         })
       );
     });
+    expect(await screen.findByText(/You did it!/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Play again/i })).toBeInTheDocument();
   });
 
   it('opens the motor game in a dedicated page and auto-logs on completion', async () => {
@@ -561,6 +563,8 @@ describe('frontend smoke flows', () => {
         })
       );
     });
+    expect(await screen.findByText(/You did it!/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Play again/i })).toBeInTheDocument();
   });
 
   it('opens the language game in a dedicated page and auto-logs on completion', async () => {
@@ -589,6 +593,8 @@ describe('frontend smoke flows', () => {
         })
       );
     });
+    expect(await screen.findByText(/You did it!/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Play again/i })).toBeInTheDocument();
   });
 
   it('opens the social-emotional game in a dedicated page and auto-logs on completion', async () => {
@@ -617,6 +623,8 @@ describe('frontend smoke flows', () => {
         })
       );
     });
+    expect(await screen.findByText(/You did it!/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Play again/i })).toBeInTheDocument();
   });
 
   it('shows admin tab and supports core admin management for admin users', async () => {

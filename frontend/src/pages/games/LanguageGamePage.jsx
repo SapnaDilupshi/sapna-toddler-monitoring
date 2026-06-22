@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import GameFrame from './GameFrame';
+import GameCompletionCard from './GameCompletionCard';
 import { useGameSession } from './gameSession';
 
 const rounds = [
@@ -106,15 +107,21 @@ export default function LanguageGamePage() {
   };
 
   return (
-    <GameFrame meta={meta} state={state}>
-      <section className="card game-scene game-scene-language language-stage">
+    <GameFrame meta={meta} state={state} hideSuccessMessage={completed}>
+      {completed ? (
+        <GameCompletionCard
+          meta={meta}
+          lastLoggedAt={state.recentLogs[0] ? formatDate(state.recentLogs[0].completedAt) : ''}
+          onPlayAgain={handleReset}
+          saving={state.saving}
+        />
+      ) : (
+        <section className="card game-scene game-scene-language language-stage">
         <div className="language-header">
           <div className="game-scene-copy">
             <p className="eyebrow">Word clues</p>
             <h2>Match each picture to the spoken word</h2>
-            <p>
-              Read the clue, tap the picture that matches, and move to the next round. This keeps the language game focused on vocabulary, not letter building.
-            </p>
+            <p>Read the word and tap the matching picture.</p>
           </div>
           <div className="language-chip-row">
             <div className="language-chip">
@@ -169,18 +176,8 @@ export default function LanguageGamePage() {
             Restart
           </button>
         </div>
-
-        <div className="game-detail-strip">
-          <div>
-            <span>Last logged</span>
-            <strong>{state.recentLogs[0] ? formatDate(state.recentLogs[0].completedAt) : 'None yet'}</strong>
-          </div>
-          <div>
-            <span>Studio note</span>
-            <strong>Picture to word matching</strong>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
     </GameFrame>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import GameFrame from './GameFrame';
+import GameCompletionCard from './GameCompletionCard';
 import { useGameSession } from './gameSession';
 
 const pads = [
@@ -62,15 +63,21 @@ export default function MotorGamePage() {
   };
 
   return (
-    <GameFrame meta={meta} state={state}>
-      <section className="card game-scene game-scene-motor motor-stage">
+    <GameFrame meta={meta} state={state} hideSuccessMessage={done}>
+      {done ? (
+        <GameCompletionCard
+          meta={meta}
+          lastLoggedAt={state.recentLogs[0] ? formatDate(state.recentLogs[0].completedAt) : ''}
+          onPlayAgain={handleReset}
+          saving={state.saving}
+        />
+      ) : (
+        <section className="card game-scene game-scene-motor motor-stage">
         <div className="motor-header">
           <div className="game-scene-copy">
             <p className="eyebrow">Movement reaction</p>
             <h2>Follow the light down the trail</h2>
-            <p>
-              Tap the glowing pad before it moves on. Keep your feet quick, stay on the path, and finish the full chase.
-            </p>
+            <p>Tap the glowing pad before it moves on.</p>
           </div>
           <div className="motor-chip-row">
             <div className="motor-chip">
@@ -125,18 +132,8 @@ export default function MotorGamePage() {
             Restart
           </button>
         </div>
-
-        <div className="game-detail-strip">
-          <div>
-            <span>Last logged</span>
-            <strong>{state.recentLogs[0] ? formatDate(state.recentLogs[0].completedAt) : 'None yet'}</strong>
-          </div>
-          <div>
-            <span>Movement cue</span>
-            <strong>Hit the lit pad first</strong>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
     </GameFrame>
   );
 }

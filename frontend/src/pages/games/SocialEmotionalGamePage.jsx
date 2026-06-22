@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import GameFrame from './GameFrame';
+import GameCompletionCard from './GameCompletionCard';
 import { useGameSession } from './gameSession';
 
 const scenes = [
@@ -110,15 +111,21 @@ export default function SocialEmotionalGamePage() {
   };
 
   return (
-    <GameFrame meta={meta} state={state}>
-      <section className="card game-scene game-scene-social social-stage">
+    <GameFrame meta={meta} state={state} hideSuccessMessage={done}>
+      {done ? (
+        <GameCompletionCard
+          meta={meta}
+          lastLoggedAt={state.recentLogs[0] ? formatDate(state.recentLogs[0].completedAt) : ''}
+          onPlayAgain={handleReset}
+          saving={state.saving}
+        />
+      ) : (
+        <section className="card game-scene game-scene-social social-stage">
         <div className="social-header">
           <div className="game-scene-copy">
             <p className="eyebrow">Kind choices</p>
             <h2>Read the scene and choose the helpful response</h2>
-            <p>
-              Each scene asks the child to pick the kind or calm response. It keeps the social-emotional game focused on decision making, not emotion naming.
-            </p>
+            <p>Pick the helpful or calm choice in each scene.</p>
           </div>
           <div className="social-chip-row">
             <div className="social-chip">
@@ -170,18 +177,8 @@ export default function SocialEmotionalGamePage() {
             Restart
           </button>
         </div>
-
-        <div className="game-detail-strip">
-          <div>
-            <span>Last logged</span>
-            <strong>{state.recentLogs[0] ? formatDate(state.recentLogs[0].completedAt) : 'None yet'}</strong>
-          </div>
-          <div>
-            <span>Focus</span>
-            <strong>Helpful response practice</strong>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
     </GameFrame>
   );
 }

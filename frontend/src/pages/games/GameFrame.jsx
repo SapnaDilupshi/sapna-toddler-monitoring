@@ -1,4 +1,4 @@
-export default function GameFrame({ meta, state, children, onBack }) {
+export default function GameFrame({ meta, state, children, onBack, hideSuccessMessage = false }) {
   const routeLabel = meta.routeLabel;
 
   return (
@@ -26,7 +26,7 @@ export default function GameFrame({ meta, state, children, onBack }) {
         <div className="game-topbar-actions">
           <div className="game-status-chip">
             <span>{routeLabel}</span>
-            <strong>{state.saving ? 'Saving...' : 'Auto-log ready'}</strong>
+            <strong>{state.saving ? 'Saving...' : state.successMessage ? 'Finished!' : 'Auto-log ready'}</strong>
           </div>
           <a className="secondary-btn game-back-link" href="/" onClick={onBack}>
             Back to dashboard
@@ -41,7 +41,7 @@ export default function GameFrame({ meta, state, children, onBack }) {
         </section>
       )}
 
-      {state.successMessage && (
+      {state.successMessage && !hideSuccessMessage && (
         <section className="card game-alert game-alert-success">
           <strong>{state.successMessage}</strong>
           <p>Return to the dashboard when you&apos;re ready for another round.</p>
