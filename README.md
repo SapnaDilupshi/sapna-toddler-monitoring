@@ -189,18 +189,12 @@ Frontend env (`frontend/.env`):
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
 - `VITE_FIREBASE_APP_ID`
 
-## MongoDB Atlas Setup
+## MongoDB Setup
 
-Use connection format:
+Production now uses MongoDB running locally on the EC2 host.
 
-```bash
-mongodb+srv://app_user:<PASSWORD>@toddler-monitoring-clus.nccnda5.mongodb.net/toddler_monitoring?retryWrites=true&w=majority&appName=toddler-monitoring-cluster
-```
-
-Allowlist:
-
-- EC2 host IP is managed in the deployment environment
-- Local development IP (`/32`)
+- EC2 backend `.env` should point `MONGODB_URI` to the local Mongo instance on that server
+- Local development can use any MongoDB URI or the in-memory fallback during tests
 
 ## Deployment (Shared EC2, Domain-Isolated)
 

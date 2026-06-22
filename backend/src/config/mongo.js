@@ -1,9 +1,17 @@
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 const { env } = require('./env');
 
 let memoryServer = null;
 let connectionMode = null;
+
+async function getMemoryServer() {
+  if (!memoryServer) {
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    memoryServer = await MongoMemoryServer.create();
+  }
+
+  return memoryServer;
+}
 
 async function connectMongo({ allowMemoryFallback = false } = {}) {
   if (mongoose.connection.readyState === 1) {
@@ -28,7 +36,7 @@ async function connectMongo({ allowMemoryFallback = false } = {}) {
   }
 
   if (!memoryServer) {
-    memoryServer = await MongoMemoryServer.create();
+    await getMemoryServer();
   }
 
   await mongoose.connect(memoryServer.getUri(), {
