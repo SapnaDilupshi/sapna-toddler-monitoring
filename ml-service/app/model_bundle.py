@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,8 @@ import numpy as np
 import pandas as pd
 
 from .feature_config import FEATURE_COLUMNS, MODEL_LABELS
+
+logger = logging.getLogger(__name__)
 
 RISK_FACTOR_MESSAGES = {
     'overall_age_gap': 'Milestone completion this week fell below the age-adjusted expectation.',
@@ -36,12 +39,91 @@ class ModelBundleError(RuntimeError):
     pass
 
 
+class RuleBasedModel:
+    classes_ = np.array(MODEL_LABELS)
+
+    @staticmethod
+    def _value(row: dict[str, Any], key: str, default: float = 0.0) -> float:
+        try:
+            return float(row.get(key, default))
+        except (TypeError, ValueError):
+            return default
+
+    def predict_proba(self, frame: pd.DataFrame) -> np.ndarray:
+        rows = frame.to_dict(orient='records')
+        probabilities = [self._predict_row(row) for row in rows]
+        return np.vstack(probabilities)
+
+    def _predict_row(self, row: dict[str, Any]) -> np.ndarray:
+        overall_gap = self._value(row, 'overall_age_gap')
+        weekly_log_count = self._value(row, 'weekly_log_count')
+        engagement = self._value(row, 'engagement_consistency')
+        confidence = self._value(row, 'avg_parent_confidence')
+        needs_help_ratio = self._value(row, 'needs_help_ratio')
+        mastered_ratio = self._value(row, 'mastered_ratio')
+        completion_score = self._value(row, 'overall_completion_score')
+        language_gap = self._value(row, 'language_age_gap')
+        motor_gap = self._value(row, 'motor_age_gap')
+        cognitive_gap = self._value(row, 'cognitive_age_gap')
+        social_gap = self._value(row, 'social_emotional_age_gap')
+
+        on_track_score = (
+            1.35 * overall_gap
+            + 0.95 * engagement
+            + 0.55 * np.log1p(max(0.0, weekly_log_count))
+            + 0.45 * (confidence / 5.0)
+            + 0.75 * mastered_ratio
+            + 0.55 * completion_score
+            - 1.15 * needs_help_ratio
+        )
+        needs_monitoring_score = (
+            0.9
+            - 0.9 * abs(overall_gap)
+            + 0.35 * (1.0 - abs(engagement - 0.55))
+            + 0.2 * (confidence / 5.0)
+            + 0.18 * np.log1p(max(0.0, weekly_log_count))
+            + 0.12 * completion_score
+        )
+        at_risk_score = (
+            0.9 * max(0.0, -overall_gap)
+            + 0.35 * max(0.0, -language_gap)
+            + 0.35 * max(0.0, -motor_gap)
+            + 0.35 * max(0.0, -cognitive_gap)
+            + 0.35 * max(0.0, -social_gap)
+            + 0.85 * needs_help_ratio
+            + 0.55 * max(0.0, 0.4 - engagement)
+            + 0.45 * max(0.0, 3.0 - weekly_log_count) / 3.0
+            + 0.35 * max(0.0, 3.0 - confidence) / 3.0
+        )
+
+        scores = np.array([on_track_score, needs_monitoring_score, at_risk_score], dtype=float)
+        scores -= scores.max()
+        probabilities = np.exp(scores)
+        return probabilities / probabilities.sum()
+
+
+def build_fallback_model_bundle() -> LoadedModelBundle:
+    logger.warning('Model bundle missing; using the built-in rule-based fallback model.')
+    return LoadedModelBundle(
+        model=RuleBasedModel(),
+        feature_columns=list(FEATURE_COLUMNS),
+        labels=list(MODEL_LABELS),
+        model_name='fallback_rule_engine',
+        model_version='sapna-rules-v1',
+    )
+
+
 def load_model_bundle(bundle_dir: Path) -> LoadedModelBundle:
     bundle_path = bundle_dir / 'model.joblib'
     if not bundle_path.exists():
-        raise ModelBundleError(f'Model bundle not found at {bundle_path}')
+        return build_fallback_model_bundle()
 
-    payload = joblib.load(bundle_path)
+    try:
+        payload = joblib.load(bundle_path)
+    except Exception as error:
+        logger.warning('Failed to load model bundle at %s; using fallback rule-based model. Reason: %s', bundle_path, error)
+        return build_fallback_model_bundle()
+
     model = payload['model']
     model_classes = list(getattr(model, 'classes_', []))
     stored_labels = list(payload.get('labels', []))

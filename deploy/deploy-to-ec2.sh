@@ -22,6 +22,7 @@ rsync -az --delete \
   --exclude 'ml-service/.pytest_cache' \
   --exclude 'ml-service/__pycache__' \
   --exclude 'ml-service/**/*.pyc' \
+  --exclude 'diagrams/' \
   --exclude '.git' \
   --exclude '.DS_Store' \
   "$LOCAL_ROOT/" "$EC2_HOST:$REMOTE_ROOT/"
