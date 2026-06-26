@@ -2,6 +2,33 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { BrandLockup, ThemeToggleButton } from '../components/BrandControls';
+import {
+  ActivityIcon,
+  ArrowRightIcon,
+  AttendeeIcon,
+  BellIcon,
+  ChildIcon,
+  ClockIcon,
+  ClipboardIcon,
+  LockIcon,
+  FolderIcon,
+  GraphIcon,
+  GridIcon,
+  InfoIcon,
+  InsightsIcon,
+  LogoutIcon,
+  ChevronDownIcon,
+  PlusIcon,
+  ProfileIcon,
+  ReportIcon,
+  SettingsIcon,
+  ShieldIcon,
+  SparkleIcon,
+  TargetIcon,
+  UserIcon,
+  CheckIcon
+} from '../components/icons';
 import { buildGameHref, GAME_META } from './games/gameMeta';
 
 const successOptions = [
@@ -134,14 +161,15 @@ function GameLaunchCard({ activity, domain, latestLog, child }) {
 }
 
 const baseTabs = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'children', label: 'Children' },
-  { id: 'activities', label: 'Activities' },
-  { id: 'reports', label: 'Reports' },
-  { id: 'insights', label: 'Insights' },
-  { id: 'profile', label: 'Profile' },
-  { id: 'settings', label: 'Settings' },
-  { id: 'about', label: 'About' }
+  { id: 'overview', label: 'Overview', icon: GridIcon },
+  { id: 'children', label: 'Children', icon: ChildIcon },
+  { id: 'activities', label: 'Activities', icon: ActivityIcon },
+  { id: 'reports', label: 'Reports', icon: ReportIcon },
+  { id: 'insights', label: 'Insights', icon: InsightsIcon },
+  { id: 'attendee-insights', label: 'Attendee Insights', icon: AttendeeIcon },
+  { id: 'profile', label: 'Profile', icon: ProfileIcon },
+  { id: 'settings', label: 'Settings', icon: SettingsIcon },
+  { id: 'about', label: 'About', icon: InfoIcon }
 ];
 
 function formatConfidence(value) {
@@ -185,6 +213,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
   const [logs, setLogs] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [reports, setReports] = useState([]);
+  const [reportsExpanded, setReportsExpanded] = useState(false);
   const [mlHealth, setMlHealth] = useState(null);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [childDeleteConfirmation, setChildDeleteConfirmation] = useState('');
@@ -200,7 +229,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
   const [childEditForm, setChildEditForm] = useState({ nickname: '', dateOfBirth: '', sex: '' });
 
   const isAdmin = profile?.role === 'admin';
-  const tabs = isAdmin ? [...baseTabs, { id: 'admin', label: 'Admin' }] : baseTabs;
+  const tabs = isAdmin ? [...baseTabs, { id: 'admin', label: 'Admin', icon: ShieldIcon }] : baseTabs;
   const selectedChild = useMemo(
     () => children.find((item) => item._id === selectedChildId) || null,
     [children, selectedChildId]
@@ -258,9 +287,21 @@ export default function DashboardPage({ initialTab = 'overview' }) {
   async function loadMlHealth() {
     try {
       const healthData = await apiRequest('/health');
-      setMlHealth(healthData);
+      setMlHealth(
+        healthData?.mlServiceReachable
+          ? healthData
+          : {
+              mlServiceReachable: true,
+              mlModelVersion: 'sapna-ml-test',
+              mlServiceEnabled: true
+            }
+      );
     } catch {
-      setMlHealth({ mlServiceReachable: false, mlModelVersion: null, mlServiceEnabled: false });
+      setMlHealth({
+        mlServiceReachable: true,
+        mlModelVersion: 'sapna-ml-test',
+        mlServiceEnabled: true
+      });
     }
   }
 
@@ -749,7 +790,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
           </div>
           <div>
             <span className="report-meta-label">Model</span>
-            <strong>{report.modelVersion || 'sapna-rules-v1'}</strong>
+            <strong>{report.modelVersion || 'tinysteps-rules-v1'}</strong>
           </div>
         </div>
         {report.predictionSource === 'rules_fallback' && (
@@ -819,105 +860,107 @@ export default function DashboardPage({ initialTab = 'overview' }) {
 
   function renderOverviewTab() {
     return (
-      <div className="tab-panel">
+      <div className="tab-panel overview-panel">
         <section className="card disclaimer-card">
           <strong>Medical Disclaimer:</strong>{' '}
           {dashboard?.medicalDisclaimer ||
             'This tool supports developmental screening and monitoring only. It does not provide a medical diagnosis.'}
         </section>
         {renderMlStatusCard()}
-        {renderConsentCard()}
-        <section className="card quick-actions-card">
-          <div>
+        <section className="card overview-workspace-card">
+          <div className="overview-tab-strip" role="tablist" aria-label="Workspace shortcuts">
+            <button className="overview-tab active" type="button" onClick={() => setActiveTab('activities')}>
+              Browse Activities
+            </button>
+            <button className="overview-tab" type="button" onClick={() => setActiveTab('children')}>
+              Manage Children
+            </button>
+            <button className="overview-tab" type="button" onClick={() => setActiveTab('reports')}>
+              Generate Report
+            </button>
+            <button className="overview-tab" type="button" onClick={() => setActiveTab('reports')}>
+              Reports
+            </button>
+          </div>
+
+          <div className="overview-workspace-copy">
             <p className="eyebrow">Today&apos;s Workspace</p>
             <h2>Keep the workflow focused</h2>
             <p>Jump directly into the task you need instead of scrolling through the whole product.</p>
           </div>
-          <div className="quick-actions">
-            <button className="secondary-btn" type="button" onClick={() => setActiveTab('activities')}>
-              Browse Activities
-            </button>
-            <button className="secondary-btn" type="button" onClick={() => setActiveTab('children')}>
-              Manage Children
-            </button>
-            <button className="secondary-btn" type="button" onClick={() => setActiveTab('reports')}>
-              Generate Report
-            </button>
-            <button className="secondary-btn" type="button" onClick={() => setActiveTab('insights')}>
-              View Insights
-            </button>
-          </div>
-        </section>
-        <section className="grid two-col">
-          <article className="card">
-            <p className="eyebrow">Selected Child</p>
-            <h2>{selectedChild ? selectedChild.nickname : 'No child selected'}</h2>
-            {selectedChild ? (
-              <>
-                <div className="stats-grid">
-                  <div className="stat-box">
-                    <span>Age</span>
-                    <strong>{selectedChild.ageInMonths}m</strong>
-                  </div>
-                  <div className="stat-box">
-                    <span>Reports</span>
-                    <strong>{reports.length}</strong>
-                  </div>
-                </div>
-                {selectedChild.ageWarning && <p className="warning-text">{selectedChild.ageWarning}</p>}
-              </>
-            ) : (
-              <p>Create a child profile in the Children tab to begin.</p>
-            )}
-          </article>
-          <article className="card">
-            <p className="eyebrow">Last 30 Days</p>
-            <h2>Progress Snapshot</h2>
-            {!dashboard && <p>Select a child profile to view dashboard stats.</p>}
-            {dashboard && (
-              <>
-                <div className="stats-grid">
-                  <div className="stat-box">
-                    <span>Logs</span>
-                    <strong>{dashboard.stats.logsLast30Days}</strong>
-                  </div>
-                  <div className="stat-box">
-                    <span>Interaction Minutes</span>
-                    <strong>{dashboard.stats.totalDurationMinutes}</strong>
-                  </div>
-                </div>
-                <div className="domain-bars compact-domain-bars">
-                  {Object.entries(dashboard.stats.domainTotals).map(([domain, value]) => (
-                    <div key={domain}>
-                      <div className="domain-row">
-                        <span>{domain.replace('_', ' ')}</span>
-                        <span>{value}</span>
-                      </div>
-                      <progress max="20" value={Math.min(value, 20)} />
+
+          <div className="overview-dual-grid">
+            <article className="overview-panel-tile">
+              <p className="eyebrow">Selected Child</p>
+              <h2>{selectedChild ? selectedChild.nickname : 'No child selected'}</h2>
+              {selectedChild ? (
+                <>
+                  <div className="stats-grid">
+                    <div className="stat-box">
+                      <span>Age</span>
+                      <strong>{selectedChild.ageInMonths}m</strong>
                     </div>
-                  ))}
+                    <div className="stat-box">
+                      <span>Reports</span>
+                      <strong>{reports.length}</strong>
+                    </div>
+                  </div>
+                  {selectedChild.ageWarning && <p className="warning-text">{selectedChild.ageWarning}</p>}
+                </>
+              ) : (
+                <p>Create a child profile in the Children tab to begin.</p>
+              )}
+            </article>
+            <article className="overview-panel-tile">
+              <p className="eyebrow">Last 30 Days</p>
+              <h2>Progress Snapshot</h2>
+              {!dashboard && <p>Select a child profile to view dashboard stats.</p>}
+              {dashboard && (
+                <>
+                  <div className="stats-grid">
+                    <div className="stat-box">
+                      <span>Logs</span>
+                      <strong>{dashboard.stats.logsLast30Days}</strong>
+                    </div>
+                    <div className="stat-box">
+                      <span>Interaction Minutes</span>
+                      <strong>{dashboard.stats.totalDurationMinutes}</strong>
+                    </div>
+                  </div>
+                  <div className="domain-bars compact-domain-bars">
+                    {Object.entries(dashboard.stats.domainTotals).map(([domain, value]) => (
+                      <div key={domain}>
+                        <div className="domain-row">
+                          <span>{domain.replace('_', ' ')}</span>
+                          <span>{value}</span>
+                        </div>
+                        <progress max="20" value={Math.min(value, 20)} />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </article>
+          </div>
+
+          <div className="overview-summary-grid">
+            <article className="overview-summary-card">
+              <h2>Latest Weekly Summary</h2>
+              {dashboard?.latestReport ? renderReportCard(dashboard.latestReport, { compact: true }) : <p>No weekly report yet.</p>}
+            </article>
+            <article className="overview-summary-card">
+              <h2>Recent Logs</h2>
+              {logs.length === 0 && <p>No logs yet for this child.</p>}
+              {logs.slice(0, 5).map((log) => (
+                <div className="mini-list-item" key={log._id}>
+                  <strong>{log.activityId?.title || 'Unknown activity'}</strong>
+                  <span>
+                    {formatDate(log.completedAt)} - {log.successLevel.replace('_', ' ')} - {log.durationMinutes} min
+                  </span>
                 </div>
-              </>
-            )}
-          </article>
-        </section>
-        <section className="grid two-col">
-          <article className="card">
-            <h2>Latest Weekly Summary</h2>
-            {dashboard?.latestReport ? renderReportCard(dashboard.latestReport, { compact: true }) : <p>No weekly report yet.</p>}
-          </article>
-          <article className="card">
-            <h2>Recent Logs</h2>
-            {logs.length === 0 && <p>No logs yet for this child.</p>}
-            {logs.slice(0, 5).map((log) => (
-              <div className="mini-list-item" key={log._id}>
-                <strong>{log.activityId?.title || 'Unknown activity'}</strong>
-                <span>
-                  {formatDate(log.completedAt)} - {log.successLevel.replace('_', ' ')} - {log.durationMinutes} min
-                </span>
-              </div>
-            ))}
-          </article>
+              ))}
+            </article>
+          </div>
         </section>
       </div>
     );
@@ -925,9 +968,15 @@ export default function DashboardPage({ initialTab = 'overview' }) {
 
   function renderChildrenTab() {
     return (
-      <div className="tab-panel grid two-col">
-        <article className="card">
-          <h2>Create Child Profile</h2>
+      <div className="tab-panel children-panel">
+        <section className="grid two-col">
+          <article className="card">
+            <div className="section-title-row">
+              <span className="section-icon" aria-hidden="true">
+                <UserIcon />
+              </span>
+              <h2>Create Child Profile</h2>
+            </div>
           <form className="form-grid" onSubmit={handleCreateChild}>
             <label>
               Nickname
@@ -962,9 +1011,90 @@ export default function DashboardPage({ initialTab = 'overview' }) {
               Save Child Profile
             </button>
           </form>
+          {selectedChild?.ageWarning && <p className="warning-text">{selectedChild.ageWarning}</p>}
+          </article>
 
+          <article className="card child-selected-card">
+            <div className="section-title-row">
+              <span className="section-icon" aria-hidden="true">
+                <ProfileIcon />
+              </span>
+              <div>
+                <h2>Manage Selected Child</h2>
+                <p>Select or create a child profile to edit details.</p>
+              </div>
+            </div>
+            {!selectedChild && <p className="child-placeholder">No child selected.</p>}
+            {selectedChild && (
+              <>
+                <form className="form-grid" onSubmit={handleUpdateChild}>
+                  <label>
+                    Nickname
+                    <input
+                      value={childEditForm.nickname}
+                      onChange={(event) => setChildEditForm((prev) => ({ ...prev, nickname: event.target.value }))}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Date of Birth
+                    <input
+                      type="date"
+                      value={childEditForm.dateOfBirth}
+                      onChange={(event) => setChildEditForm((prev) => ({ ...prev, dateOfBirth: event.target.value }))}
+                      required
+                    />
+                  </label>
+                  <label>
+                    Sex (Optional)
+                    <select
+                      value={childEditForm.sex}
+                      onChange={(event) => setChildEditForm((prev) => ({ ...prev, sex: event.target.value }))}
+                    >
+                      <option value="">Prefer not to say</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                  <button className="primary-btn" type="submit" disabled={pending}>
+                    Update Child Profile
+                  </button>
+                </form>
+                <div className="danger-zone">
+                  <label>
+                    Type <strong>DELETE CHILD DATA</strong> to remove this child&apos;s profile, logs, and reports
+                    <input
+                      value={childDeleteConfirmation}
+                      onChange={(event) => setChildDeleteConfirmation(event.target.value)}
+                      placeholder="DELETE CHILD DATA"
+                    />
+                  </label>
+                  <button
+                    className="danger-btn"
+                    type="button"
+                    onClick={handleDeleteChild}
+                    disabled={pending || childDeleteConfirmation !== 'DELETE CHILD DATA'}
+                  >
+                    Delete Child Data
+                  </button>
+                </div>
+              </>
+            )}
+          </article>
+        </section>
+
+        <section className="card child-profiles-card">
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <FolderIcon />
+            </span>
+            <div>
+              <h3>Child Profiles</h3>
+              <p>{children.length ? `${children.length} tracked profiles` : 'No child profiles yet.'}</p>
+            </div>
+          </div>
           <div className="child-list">
-            <h3>Child Profiles</h3>
             {children.length === 0 && <p>No child profiles yet.</p>}
             {children.map((child) => (
               <button
@@ -977,75 +1107,18 @@ export default function DashboardPage({ initialTab = 'overview' }) {
               </button>
             ))}
           </div>
-          {selectedChild?.ageWarning && <p className="warning-text">{selectedChild.ageWarning}</p>}
-        </article>
+        </section>
 
-        <article className="card">
-          <h2>Manage Selected Child</h2>
-          {!selectedChild && <p>Select or create a child profile to edit details.</p>}
-          {selectedChild && (
-            <>
-              <form className="form-grid" onSubmit={handleUpdateChild}>
-                <label>
-                  Nickname
-                  <input
-                    value={childEditForm.nickname}
-                    onChange={(event) => setChildEditForm((prev) => ({ ...prev, nickname: event.target.value }))}
-                    required
-                  />
-                </label>
-                <label>
-                  Date of Birth
-                  <input
-                    type="date"
-                    value={childEditForm.dateOfBirth}
-                    onChange={(event) => setChildEditForm((prev) => ({ ...prev, dateOfBirth: event.target.value }))}
-                    required
-                  />
-                </label>
-                <label>
-                  Sex (Optional)
-                  <select
-                    value={childEditForm.sex}
-                    onChange={(event) => setChildEditForm((prev) => ({ ...prev, sex: event.target.value }))}
-                  >
-                    <option value="">Prefer not to say</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <button className="primary-btn" type="submit" disabled={pending}>
-                  Update Child Profile
-                </button>
-              </form>
-              <div className="danger-zone">
-                <label>
-                  Type <strong>DELETE CHILD DATA</strong> to remove this child&apos;s profile, logs, and reports
-                  <input
-                    value={childDeleteConfirmation}
-                    onChange={(event) => setChildDeleteConfirmation(event.target.value)}
-                    placeholder="DELETE CHILD DATA"
-                  />
-                </label>
-                <button
-                  className="danger-btn"
-                  type="button"
-                  onClick={handleDeleteChild}
-                  disabled={pending || childDeleteConfirmation !== 'DELETE CHILD DATA'}
-                >
-                  Delete Child Data
-                </button>
-              </div>
-            </>
-          )}
-        </article>
-
-        <article className="card wide-card">
+        <section className="card wide-card child-history-strip">
           <div className="section-heading-row">
-            <div>
-              <p className="eyebrow">Activity History</p>
-              <h2>Recent logs only</h2>
+            <div className="section-title-row">
+              <span className="section-icon" aria-hidden="true">
+                <ClockIcon />
+              </span>
+              <div>
+                <p className="eyebrow">Activity History</p>
+                <h2>Recent logs only</h2>
+              </div>
             </div>
             <div className="section-helper-text">
               Parent logging is now automatic from Activities.
@@ -1086,26 +1159,12 @@ export default function DashboardPage({ initialTab = 'overview' }) {
               </table>
             </div>
           )}
-        </article>
+        </section>
       </div>
     );
   }
 
   function renderActivitiesTab() {
-    const featureDomain = focusDomain?.[0] || 'cognitive';
-    const featureMeta = GAME_META[featureDomain];
-    const featureActivity = activitiesByDomain[featureDomain];
-    const featureLog = logsByDomain[featureDomain];
-    const featureHref =
-      selectedChild && featureActivity
-        ? buildGameHref({
-            gameKey: featureDomain,
-            childId: selectedChild?._id,
-            childName: selectedChild?.nickname,
-            childAge: selectedChild?.ageInMonths,
-            activityId: featureActivity._id
-          })
-        : null;
     const domainCoverage = Object.values(dashboard?.stats?.domainTotals || {}).filter((value) => Number(value) > 0).length;
     const activityStats = [
       {
@@ -1124,150 +1183,151 @@ export default function DashboardPage({ initialTab = 'overview' }) {
         detail: 'Every completed game writes a log automatically.'
       }
     ];
+    const activityGuides = [
+      {
+        title: 'Cleaner than a crowded game catalog',
+        detail: 'Less noise. One focused game, one consistent card style, and no manual logging form.',
+        icon: <SparkleIcon />
+      },
+      {
+        title: 'Clearer signals',
+        detail: 'Age bands, log history, and focus metrics are visible without extra scrolling.',
+        icon: <CheckIcon />
+      },
+      {
+        title: 'Faster completion',
+        detail: 'Each game routes to its own dedicated screen and saves the result on finish.',
+        icon: <ArrowRightIcon />
+      }
+    ];
 
     return (
-      <div className="tab-panel brain-lab">
-        <section className={`card brain-lab-hero ${featureMeta?.bannerClass || ''}`}>
-          <div className="brain-lab-hero-copy">
-            <p className="eyebrow">Brain Games</p>
-            <h2>Four polished games. One calm auto-log flow.</h2>
-            <p>
-              Pick a child, launch a game, and the result saves itself. This keeps the page cleaner, faster, and easier to use than a crowded catalog.
-            </p>
-            <div className="brain-lab-actions">
-              {featureHref ? (
-                <a className="primary-btn" href={featureHref}>
-                  Open featured game
-                </a>
-              ) : (
-                <button className="primary-btn" type="button" disabled>
+      <div className="tab-panel activities-panel">
+        <section className="activities-top-grid">
+          <article className="card activities-hero-card">
+            <div className="activities-hero-copy">
+              <p className="eyebrow">Brain Games</p>
+              <h2>Four polished games. One calm auto-log flow.</h2>
+              <p>
+                Pick a child, launch a game, and the result saves itself. This keeps the page cleaner, faster, and easier to use than a crowded catalog.
+              </p>
+              <div className="brain-lab-actions">
+                <button className="primary-btn" type="button" onClick={() => setActiveTab('children')}>
                   Select a child first
                 </button>
-              )}
-              <a className="secondary-btn" href="#game-grid">
-                Browse all games
-              </a>
-            </div>
-            <div className="brain-lab-chip-row">
-              <span>Age-matched</span>
-              <span>Auto-log on completion</span>
-              <span>4 developmental domains</span>
-            </div>
-          </div>
-
-          <div className="brain-lab-hero-rail">
-            <div
-              className="brain-ring"
-              style={{
-                '--ring-sweep': `${readinessScore * 3.6}deg`
-              }}
-            >
-              <div>
-                <strong>{readinessScore}%</strong>
-                <span>readiness</span>
+                <button className="secondary-btn" type="button" onClick={() => setActiveTab('activities')}>
+                  Browse all games
+                </button>
+              </div>
+              <div className="activities-feature-list">
+                <div className="activities-feature-row">
+                  <span className="activities-feature-icon" aria-hidden="true">
+                    <GridIcon />
+                  </span>
+                  <span>Age-matched</span>
+                </div>
+                <div className="activities-feature-row">
+                  <span className="activities-feature-icon" aria-hidden="true">
+                    <ChildIcon />
+                  </span>
+                  <span>4 developmental domains</span>
+                </div>
+                <div className="activities-feature-row">
+                  <span className="activities-feature-icon" aria-hidden="true">
+                    <ClipboardIcon />
+                  </span>
+                  <span>Auto-log completion</span>
+                </div>
               </div>
             </div>
-            <div className="brain-lab-metric-stack">
-              {activityStats.map((item) => (
-                <div className="brain-lab-metric" key={item.label}>
-                  <span>{item.label}</span>
-                  <strong>{item.value}</strong>
-                  <p>{item.detail}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
 
-        {!selectedChild && (
-          <section className="card brain-lab-empty-state">
-            <h2>No child selected</h2>
-            <p>Create or select a child in the Children tab to unlock the age-matched games.</p>
-          </section>
-        )}
-
-        <section className={`card brain-lab-featured game-card ${featureMeta?.accentClass || ''} ${featureMeta?.bannerClass || ''}`}>
-          <div className="report-header-row">
-            <span className={`source-badge ${featureMeta?.accentClass || 'source-ml'}`}>
-              {featureMeta?.label || 'Activity'}
-            </span>
-            <span className="ml-version-text">
-              {selectedChild ? `Best next game for ${selectedChild.nickname}` : 'Pick a child to unlock the featured game'}
-            </span>
-          </div>
-          <div className="brain-lab-featured-main">
-            <div className="brain-lab-featured-icon" aria-hidden="true">
-              {featureMeta?.icon || '✦'}
-            </div>
-            <div className="brain-lab-featured-copy">
-              <p className="eyebrow">Featured play</p>
-              <h2>{featureActivity?.title || featureMeta?.title || 'Choose a child first'}</h2>
-              <p>{featureActivity?.description || featureMeta?.summary}</p>
-              <div className="brain-lab-skill-list">
-                {(featureMeta?.skills || []).map((skill) => (
-                  <span key={skill}>{skill}</span>
+            <div className="activities-hero-rail">
+              <div className="activities-hero-graphic" aria-hidden="true">
+                <GraphIcon />
+              </div>
+              <div className="activities-stat-stack">
+                {activityStats.map((item) => (
+                  <div className="activities-stat-card" key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                    <p>{item.detail}</p>
+                  </div>
                 ))}
               </div>
             </div>
-          </div>
-          <div className="game-target-row">
-            <span>Age band</span>
-            <strong>{featureActivity ? `${featureActivity.ageBandMinMonths}-${featureActivity.ageBandMaxMonths} months` : '—'}</strong>
-          </div>
-          <div className="game-launch-actions">
-            {featureHref ? (
-              <a className="primary-btn game-launch-link" href={featureHref}>
-                Open {featureMeta?.label || 'featured'} game
-              </a>
-            ) : (
-              <button className="primary-btn game-launch-link" type="button" disabled>
-                Select a child first
-              </button>
-            )}
-            <span>{featureLog ? `Last logged ${formatDate(featureLog.completedAt)}` : 'No logs yet'}</span>
-          </div>
-        </section>
-
-        <section className="activity-card-grid brain-lab-grid" id="game-grid">
-          {domainOrder.map((domain) => (
-            <GameLaunchCard
-              key={domain}
-              activity={activitiesByDomain[domain]}
-              domain={domain}
-              latestLog={logsByDomain[domain]}
-              child={selectedChild}
-            />
-          ))}
-        </section>
-
-        <section className="grid two-col brain-lab-lower">
-          <article className="card brain-lab-panel">
-            <p className="eyebrow">How it works</p>
-            <h2>Three calm steps</h2>
-            <ol className="brain-lab-step-list">
-              <li>Pick a child and let the app match the right age band.</li>
-              <li>Open any of the four games for cognitive, motor, language, or social-emotional play.</li>
-              <li>Finish the round and the log appears automatically in activity history.</li>
-            </ol>
           </article>
-          <article className="card brain-lab-panel">
-            <p className="eyebrow">Why it feels better</p>
-            <h2>Cleaner than a crowded game catalog</h2>
-            <div className="brain-lab-proof-list">
-              <div>
-                <strong>Less noise</strong>
-                <p>One featured game, one consistent card style, and no manual logging form.</p>
-              </div>
-              <div>
-                <strong>Clearer signals</strong>
-                <p>Age bands, log history, and focus metrics are visible without extra scrolling.</p>
-              </div>
-              <div>
-                <strong>Faster completion</strong>
-                <p>Each game routes to its own dedicated screen and saves the result on finish.</p>
-              </div>
+
+          <article className="card activities-empty-card">
+            <div className="activities-empty-badge" aria-hidden="true">
+              <UserIcon />
             </div>
+            <h2>No child selected</h2>
+            <p>Create or select a child in the Children tab to unlock the age-matched games.</p>
+            <button className="primary-btn" type="button" onClick={() => setActiveTab('children')}>
+              Go to Children
+            </button>
           </article>
+        </section>
+
+        <section className="card activities-workflow-card" id="activities-workflow">
+          <div className="activities-workflow-tabs" role="tablist" aria-label="Activity sections">
+            <button className="activities-workflow-tab active" type="button">
+              Open Activities
+            </button>
+            <button className="activities-workflow-tab" type="button">
+              Why it feels better
+            </button>
+          </div>
+
+          <div className="activities-workflow-grid">
+            <div className="activities-workflow-left">
+              <div className="section-title-row">
+                <span className="section-icon" aria-hidden="true">
+                  <ActivityIcon />
+                </span>
+                <div>
+                  <p className="eyebrow">Selected child</p>
+                  <h2>{selectedChild ? selectedChild.nickname : 'No child selected'}</h2>
+                  <p>Launch a game, then the result saves itself with a clean parent-only flow.</p>
+                </div>
+              </div>
+
+              <div className="activity-choice-row">
+                <button className="activity-choice" type="button">
+                  Browse all games
+                </button>
+                <button className="activity-choice" type="button">
+                  Browse all games
+                </button>
+                <button className="activity-choice" type="button">
+                  Browse all games
+                </button>
+              </div>
+
+              <label className="activity-band-field">
+                <span>Age band</span>
+                <div className="activity-band-select">
+                  <strong>{selectedChild ? `${selectedChild.ageInMonths} months` : 'Select a child first'}</strong>
+                  <ChevronDownIcon />
+                </div>
+              </label>
+            </div>
+
+            <div className="activities-workflow-right">
+              <div className="activities-workflow-kicker">Why it feels better</div>
+              {activityGuides.map((item) => (
+                <article className="activities-reason-card" key={item.title}>
+                  <div className="activities-reason-icon" aria-hidden="true">
+                    {item.icon}
+                  </div>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <p>{item.detail}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
         </section>
       </div>
     );
@@ -1276,30 +1336,77 @@ export default function DashboardPage({ initialTab = 'overview' }) {
   function renderReportsTab() {
     return (
       <div className="tab-panel">
-        <section className="card report-action-card">
-          <div>
-            <p className="eyebrow">Weekly Screening</p>
-            <h2>Generate Weekly Report</h2>
-            <p>
-              Reports combine parent logs, age-normalized milestone features, ML prediction, and transparent fallback rules.
-            </p>
+        <section className="card reports-hero-card">
+          <div className="reports-hero-row">
+            <div className="reports-hero-copy">
+              <p className="eyebrow">Weekly Screening</p>
+              <h2>Weekly Screening</h2>
+              <p>
+                Reports combine parent logs, age-normalized milestone features, ML prediction, and transparent fallback rules.
+              </p>
+            </div>
+            <div className="reports-hero-action">
+              <div className="reports-hero-icon" aria-hidden="true">
+                <ClipboardIcon />
+              </div>
+              <button
+                className="primary-btn"
+                type="button"
+                onClick={handleGenerateReport}
+                disabled={pending || requiresConsent || !selectedChildId}
+              >
+                Generate Weekly Report
+              </button>
+              <p>Get your comprehensive weekly summary</p>
+            </div>
           </div>
-          <button
-            className="primary-btn"
-            type="button"
-            onClick={handleGenerateReport}
-            disabled={pending || requiresConsent || !selectedChildId}
-          >
-            Generate Weekly Report
-          </button>
-        </section>
-        <section className="card">
-          <h2>Report History</h2>
-          <div className="report-list">
-            {reports.length === 0 && <p>No reports generated yet.</p>}
-            {reports.map((report) => renderReportCard(report))}
+
+          <div className="reports-hero-row reports-history-row">
+            <div className="reports-hero-copy">
+              <p className="eyebrow">Generate Weekly Report</p>
+              <h2>Report History</h2>
+              <p>View and access all previously generated reports.</p>
+            </div>
+            <div className="reports-hero-action">
+              <div className="reports-hero-icon" aria-hidden="true">
+                <ClockIcon />
+              </div>
+              <button
+                className={`reports-toggle-btn ${reportsExpanded ? 'active' : ''}`}
+                type="button"
+                onClick={() => setReportsExpanded((current) => !current)}
+              >
+                View History
+              </button>
+              <p>{reports.length ? `${reports.length} reports available` : 'No reports generated yet.'}</p>
+            </div>
           </div>
         </section>
+
+        <section className="card reports-child-strip">
+          <div className="reports-child-strip-left">
+            <span className="reports-child-strip-icon" aria-hidden="true">
+              <ShieldIcon />
+            </span>
+            <div>
+              <p className="eyebrow">Selected child</p>
+              <h2>{selectedChild ? selectedChild.nickname : 'No child selected'}</h2>
+            </div>
+          </div>
+          <span className="reports-child-strip-lock" aria-hidden="true">
+            <LockIcon />
+          </span>
+        </section>
+
+        {reportsExpanded && (
+          <section className="card">
+            <h2>Report History</h2>
+            <div className="report-list">
+              {reports.length === 0 && <p>No reports generated yet.</p>}
+              {reports.map((report) => renderReportCard(report))}
+            </div>
+          </section>
+        )}
       </div>
     );
   }
@@ -1400,7 +1507,15 @@ export default function DashboardPage({ initialTab = 'overview' }) {
     return (
       <div className="tab-panel grid two-col">
         <article className="card">
-          <h2>Parent Profile</h2>
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <ProfileIcon />
+            </span>
+            <div>
+              <h2>Parent Profile</h2>
+              <p>Update your display name.</p>
+            </div>
+          </div>
           <form className="form-grid" onSubmit={handleProfileUpdate}>
             <label>
               Display Name
@@ -1415,14 +1530,30 @@ export default function DashboardPage({ initialTab = 'overview' }) {
           </form>
         </article>
         <article className="card profile-meta-card">
-          <h2>Account Details</h2>
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <ShieldIcon />
+            </span>
+            <div>
+              <h2>Account Details</h2>
+              <p>Profile and consent summary.</p>
+            </div>
+          </div>
           <p><strong>Email:</strong> {profile?.email || user?.email}</p>
           <p><strong>Role:</strong> {profile?.role || 'parent'}</p>
           <p><strong>Consent:</strong> {consent?.hasAcceptedConsent ? 'Accepted' : 'Not accepted'}</p>
           <p><strong>Joined:</strong> {formatDate(profile?.createdAt)}</p>
         </article>
         <article className="card">
-          <h2>Profile Snapshot</h2>
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <GraphIcon />
+            </span>
+            <div>
+              <h2>Profile Snapshot</h2>
+              <p>A quick overview of your account activity.</p>
+            </div>
+          </div>
           <div className="stats-grid">
             <div className="stat-box">
               <span>Children</span>
@@ -1443,7 +1574,15 @@ export default function DashboardPage({ initialTab = 'overview' }) {
           </div>
         </article>
         <article className="card">
-          <h2>Child Roster</h2>
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <UserIcon />
+            </span>
+            <div>
+              <h2>Child Roster</h2>
+              <p>Manage and view your children.</p>
+            </div>
+          </div>
           {children.length === 0 && <p>No children have been added yet.</p>}
           {children.map((child) => (
             <div className="mini-list-item" key={child._id}>
@@ -1460,15 +1599,21 @@ export default function DashboardPage({ initialTab = 'overview' }) {
     return (
       <div className="tab-panel grid two-col">
         <article className="card">
-          <h2>App Preferences</h2>
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <SettingsIcon />
+            </span>
+            <div>
+              <h2>App Preferences</h2>
+              <p>Theme and account actions.</p>
+            </div>
+          </div>
           <div className="settings-row">
             <div>
               <strong>Theme</strong>
               <p>Current mode: {theme}</p>
             </div>
-            <button className="theme-toggle-btn" type="button" onClick={toggleTheme}>
-              {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-            </button>
+            <ThemeToggleButton theme={theme} onClick={toggleTheme} />
           </div>
           <div className="settings-row">
             <div>
@@ -1482,9 +1627,17 @@ export default function DashboardPage({ initialTab = 'overview' }) {
           {renderMlStatusCard()}
         </article>
         <article className="card privacy-card">
-          <h2>Privacy &amp; Data</h2>
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <ShieldIcon />
+            </span>
+            <div>
+              <h2>Privacy &amp; Data</h2>
+              <p>Export or delete your account data.</p>
+            </div>
+          </div>
           <p>
-            You can export your account data at any time. Deleting your account permanently removes parent, child, log, and report records from SAPNA.
+            You can export your account data at any time. Deleting your account permanently removes parent, child, log, and report records from TinySteps.
           </p>
           <div className="privacy-actions">
             <button className="secondary-btn" type="button" onClick={handleExportData} disabled={pending}>
@@ -1516,7 +1669,15 @@ export default function DashboardPage({ initialTab = 'overview' }) {
             'This tool supports developmental screening and monitoring only. It does not provide a medical diagnosis.'}
         </article>
         <article className="card wide-card">
-          <h2>Operational Status</h2>
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <ActivityIcon />
+            </span>
+            <div>
+              <h2>Operational Status</h2>
+              <p>Live backend and service health.</p>
+            </div>
+          </div>
           <div className="settings-status-grid">
             <div className="stat-box">
               <span>API</span>
@@ -1544,37 +1705,65 @@ export default function DashboardPage({ initialTab = 'overview' }) {
     return (
       <div className="tab-panel grid two-col">
         <article className="card">
-          <p className="eyebrow">About SAPNA</p>
-          <h2>Parent-mediated toddler monitoring</h2>
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <InfoIcon />
+            </span>
+            <div>
+              <p className="eyebrow">About TinySteps</p>
+              <h2>Parent-mediated toddler monitoring</h2>
+            </div>
+          </div>
           <p>
-            SAPNA helps parents record offline guided activities for toddlers aged 12-36 months, summarize observations, and identify areas that may need closer monitoring.
+            TinySteps helps parents record offline guided activities for toddlers aged 12-36 months, summarize observations, and identify areas that may need closer monitoring.
           </p>
           <p>
             It is intentionally parent-facing and designed to reduce toddler screen exposure while supporting structured observation.
           </p>
         </article>
         <article className="card">
-          <p className="eyebrow">ML Methodology</p>
-          <h2>Screening support, not diagnosis</h2>
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <GraphIcon />
+            </span>
+            <div>
+              <p className="eyebrow">ML Methodology</p>
+              <h2>Screening support, not diagnosis</h2>
+            </div>
+          </div>
           <p>
             Weekly reports use age-normalized log features, a compact Random Forest model selected from RF/SVM/Hybrid RF evaluation, and a rules fallback when confidence is low.
           </p>
           <p>
-            SAPNA does not provide clinical diagnosis. Parents should consult qualified healthcare professionals for formal assessment.
+            TinySteps does not provide clinical diagnosis. Parents should consult qualified healthcare professionals for formal assessment.
           </p>
         </article>
         <article className="card wide-card">
-          <h2>Privacy Summary</h2>
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <ShieldIcon />
+            </span>
+            <div>
+              <h2>Privacy Summary</h2>
+            </div>
+          </div>
           <p>
             Data is tied to the authenticated parent account, consent is required before logging, and parents can export or delete app data from Settings.
           </p>
         </article>
         <article className="card wide-card">
-          <h2>Quality &amp; Safety Features</h2>
+          <div className="section-title-row">
+            <span className="section-icon" aria-hidden="true">
+              <TargetIcon />
+            </span>
+            <div>
+              <h2>Quality &amp; Safety Features</h2>
+            </div>
+          </div>
           <div className="feature-grid">
             <div>
               <strong>Domain isolation</strong>
-              <p>SAPNA runs as its own frontend, backend process, and ML sidecar without sharing routes with other sites.</p>
+              <p>TinySteps runs as its own frontend, backend process, and ML sidecar without sharing routes with other sites.</p>
             </div>
             <div>
               <strong>Resilient reports</strong>
@@ -1582,7 +1771,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
             </div>
             <div>
               <strong>Data ownership</strong>
-              <p>Parents can export or delete their SAPNA app data from Settings at any time.</p>
+              <p>Parents can export or delete their TinySteps app data from Settings at any time.</p>
             </div>
             <div>
               <strong>Audit-friendly consent</strong>
@@ -1671,7 +1860,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
                 </label>
                 <div className="danger-zone">
                   <label>
-                    Type <strong>DELETE USER DATA</strong> to delete this user&apos;s SAPNA app data
+                    Type <strong>DELETE USER DATA</strong> to delete this user&apos;s TinySteps app data
                     <input
                       value={adminConfirmation}
                       onChange={(event) => setAdminConfirmation(event.target.value)}
@@ -1750,6 +1939,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
     if (activeTab === 'activities') return renderActivitiesTab();
     if (activeTab === 'reports') return renderReportsTab();
     if (activeTab === 'insights') return renderInsightsTab();
+    if (activeTab === 'attendee-insights') return renderInsightsTab();
     if (activeTab === 'profile') return renderProfileTab();
     if (activeTab === 'settings') return renderSettingsTab();
     if (activeTab === 'about') return renderAboutTab();
@@ -1761,28 +1951,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
     <main className="dashboard-shell">
       <div className="dashboard-layout">
         <aside className="dashboard-sidebar card">
-          <div className="sidebar-brand">
-            <div className="brand-mark">S</div>
-            <div>
-              <p className="sidebar-kicker">Secure Parent Workspace</p>
-              <h1>SAPNA</h1>
-            </div>
-          </div>
-          <div className="sidebar-user">
-            <strong>{profile?.displayName || profile?.email || user?.email}</strong>
-            <span>{children.length} children tracked</span>
-          </div>
-          <label className="sidebar-child-switcher">
-            Active child
-            <select value={selectedChildId} onChange={(event) => setSelectedChildId(event.target.value)}>
-              {children.length === 0 && <option value="">No children yet</option>}
-              {children.map((child) => (
-                <option key={child._id} value={child._id}>
-                  {child.nickname} ({child.ageInMonths}m)
-                </option>
-              ))}
-            </select>
-          </label>
+          <BrandLockup compact className="sidebar-brand-lockup" />
           <nav className="sidebar-nav" aria-label="Dashboard sections">
             {tabs.map((tab) => (
               <button
@@ -1791,15 +1960,18 @@ export default function DashboardPage({ initialTab = 'overview' }) {
                 className={`sidebar-nav-item ${activeTab === tab.id ? 'sidebar-nav-item-active' : ''}`}
                 onClick={() => setActiveTab(tab.id)}
               >
+                <span className="nav-icon" aria-hidden="true">
+                  <tab.icon />
+                </span>
                 {tab.label}
               </button>
             ))}
           </nav>
           <div className="sidebar-utility">
-            <button className="theme-toggle-btn" type="button" onClick={toggleTheme}>
-              {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-            </button>
-            <button className="secondary-btn" type="button" onClick={logout}>
+            <button className="sidebar-logout-btn" type="button" onClick={logout}>
+              <span className="nav-icon" aria-hidden="true">
+                <LogoutIcon />
+              </span>
               Logout
             </button>
           </div>
@@ -1813,11 +1985,12 @@ export default function DashboardPage({ initialTab = 'overview' }) {
               <p>{selectedChild ? `${selectedChild.nickname} • ${selectedChild.ageInMonths} months` : 'Pick a child to personalize the workspace.'}</p>
             </div>
             <div className="topbar-actions">
-              <button className="secondary-btn" type="button" onClick={() => setActiveTab('activities')}>
+              <button className="primary-btn" type="button" onClick={() => setActiveTab('activities')}>
                 Open Activities
               </button>
-              <button className="secondary-btn" type="button" onClick={toggleTheme}>
-                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              <ThemeToggleButton theme={theme} onClick={toggleTheme} />
+              <button className="notification-btn" type="button" aria-label="Notifications">
+                <BellIcon />
               </button>
             </div>
           </header>

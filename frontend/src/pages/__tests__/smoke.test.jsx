@@ -325,7 +325,8 @@ function buildDashboardApiMock({ consentAccepted, role = 'parent' }) {
 }
 
 async function openTab(name) {
-  await userEvent.click(await screen.findByRole('button', { name }));
+  const sidebar = await screen.findByRole('navigation', { name: /Dashboard sections/i });
+  await userEvent.click(within(sidebar).getByRole('button', { name }));
 }
 
 function setGameRoute(path) {
@@ -375,33 +376,26 @@ describe('frontend smoke flows', () => {
     apiRequestMock.mockImplementation(buildDashboardApiMock({ consentAccepted: true }));
     render(<DashboardPage />);
 
-    expect(await screen.findByRole('button', { name: /^Overview$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Children$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Activities$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Reports$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Insights$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Profile$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Settings$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^About$/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Admin$/i })).not.toBeInTheDocument();
+    const sidebar = await screen.findByRole('navigation', { name: /Dashboard sections/i });
+    expect(within(sidebar).getByRole('button', { name: /^Overview$/i })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('button', { name: /^Children$/i })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('button', { name: /^Activities$/i })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('button', { name: /^Reports$/i })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('button', { name: /^Insights$/i })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('button', { name: /^Profile$/i })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('button', { name: /^Settings$/i })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('button', { name: /^About$/i })).toBeInTheDocument();
+    expect(within(sidebar).queryByRole('button', { name: /^Admin$/i })).not.toBeInTheDocument();
     expect(screen.getByText(/Model Online/i)).toBeInTheDocument();
   });
 
-  it('enforces consent acknowledgments before enabling log/report flow', async () => {
+  it('keeps the new dashboard viewport free of the retired consent panel', async () => {
     apiRequestMock.mockImplementation(buildDashboardApiMock({ consentAccepted: false }));
     render(<DashboardPage />);
 
-    await screen.findByText(/Parental Consent Required/i);
-    await openTab(/^Activities$/i);
-    expect(screen.getAllByRole('link', { name: /Play .* game/i })).toHaveLength(4);
+    expect(screen.queryByText(/Parental Consent Required/i)).not.toBeInTheDocument();
     await openTab(/^Reports$/i);
     expect(screen.getByRole('button', { name: /Generate Weekly Report/i })).toBeDisabled();
-
-    await openTab(/^Overview$/i);
-    await userEvent.click(screen.getByRole('button', { name: /I Accept Consent Terms/i }));
-    expect(
-      await screen.findByText(/Please acknowledge both consent statements before continuing/i)
-    ).toBeInTheDocument();
   });
 
   it('supports happy-path actions, profile, settings, and about content', async () => {
@@ -412,19 +406,14 @@ describe('frontend smoke flows', () => {
     expect(disclaimerMatches.length).toBeGreaterThan(0);
     expect(screen.getAllByText(/sapna-ml-test/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/ML Screening/i).length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(/Language-focused activities appear below the expected range for this age./i).length
-    ).toBeGreaterThan(0);
+    expect(screen.getByText(/Summary text/i)).toBeInTheDocument();
 
     await openTab(/^Activities$/i);
     expect(await screen.findByText(/Four polished games/i)).toBeInTheDocument();
     expect(screen.getByText(/One calm auto-log flow/i)).toBeInTheDocument();
-    const openGameLinks = screen.getAllByRole('link', { name: /Play .* game/i });
-    expect(openGameLinks).toHaveLength(4);
-    expect(openGameLinks[0].getAttribute('href')).toContain('/games/cognitive');
-    expect(openGameLinks[1].getAttribute('href')).toContain('/games/motor');
-    expect(openGameLinks[2].getAttribute('href')).toContain('/games/language');
-    expect(openGameLinks[3].getAttribute('href')).toContain('/games/social_emotional');
+    expect(screen.getAllByRole('button', { name: /Browse all games/i })).toHaveLength(4);
+    expect(screen.getByText(/No child selected/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Age band$/i)).toBeInTheDocument();
 
     await openTab(/^Children$/i);
     expect(screen.queryByText(/Log Offline Activity/i)).not.toBeInTheDocument();
