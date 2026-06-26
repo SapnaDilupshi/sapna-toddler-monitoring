@@ -14,7 +14,7 @@ export default function App() {
     return (
       <main className="app-shell loading-state">
         <div className="card">
-          <h1>Loading SAPNA Dashboard</h1>
+          <h1>Loading TinySteps</h1>
           <p>Preparing secure parent workspace...</p>
         </div>
       </main>

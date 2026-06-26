@@ -5,7 +5,7 @@ const ThemeContext = createContext(null);
 
 function getInitialTheme() {
   if (typeof window === 'undefined') {
-    return 'light';
+    return 'dark';
   }
 
   try {
@@ -17,7 +17,7 @@ function getInitialTheme() {
     // Storage can be unavailable in private or restricted browser contexts.
   }
 
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return 'dark';
 }
 
 export function ThemeProvider({ children }) {
