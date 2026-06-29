@@ -81,18 +81,28 @@ export function AuthProvider({ children }) {
         }
         return signInWithEmailAndPassword(auth, email, password);
       },
-      signup: (email, password) => {
+      signup: async (email, password) => {
         if (devAuthEnabled) {
           const nextUser = buildDevUser(email);
           window.localStorage.setItem('sapna-dev-auth', JSON.stringify({ email: nextUser.email }));
           setUser(nextUser);
-          return Promise.resolve(nextUser);
+          return nextUser;
         }
 
         if (!auth) {
           throw new Error(firebaseConfigError || 'Firebase auth is unavailable.');
         }
-        return createUserWithEmailAndPassword(auth, email, password);
+        try {
+          return await createUserWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+          if (error?.code !== 'auth/network-request-failed') {
+            throw error;
+          }
+
+          // Firebase can create the account before a transient response failure reaches the browser.
+          // Signing in once makes signup idempotent for that partial-success case.
+          return signInWithEmailAndPassword(auth, email, password);
+        }
       },
       resetPassword: (email) => {
         if (devAuthEnabled) {

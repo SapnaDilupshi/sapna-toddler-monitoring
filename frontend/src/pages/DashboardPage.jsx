@@ -5,7 +5,6 @@ import { useTheme } from '../hooks/useTheme';
 import { BrandLockup, ThemeToggleButton } from '../components/BrandControls';
 import {
   ActivityIcon,
-  ArrowRightIcon,
   AttendeeIcon,
   BellIcon,
   ChildIcon,
@@ -18,16 +17,13 @@ import {
   InfoIcon,
   InsightsIcon,
   LogoutIcon,
-  ChevronDownIcon,
   PlusIcon,
   ProfileIcon,
   ReportIcon,
   SettingsIcon,
   ShieldIcon,
-  SparkleIcon,
   TargetIcon,
-  UserIcon,
-  CheckIcon
+  UserIcon
 } from '../components/icons';
 import { buildGameHref, GAME_META } from './games/gameMeta';
 
@@ -91,7 +87,7 @@ function getBestDomainActivity(activities, domain, childAgeInMonths) {
     .sort((left, right) => left.distance - right.distance)[0].activity;
 }
 
-function GameLaunchCard({ activity, domain, latestLog, child }) {
+function GameLaunchCard({ activity, domain, latestLog, child, locked = false }) {
   const meta = GAME_META[domain];
   const skills = meta?.skills || [];
 
@@ -151,9 +147,15 @@ function GameLaunchCard({ activity, domain, latestLog, child }) {
       </div>
 
       <div className="game-launch-actions">
-        <a className="primary-btn game-launch-link" href={href}>
-          Play {meta.label} game
-        </a>
+        {locked ? (
+          <button className="primary-btn game-launch-link" type="button" disabled>
+            Accept consent to play
+          </button>
+        ) : (
+          <a className="primary-btn game-launch-link" href={href}>
+            Play {meta.label} game
+          </a>
+        )}
         <span>{latestLog ? `Last logged ${formatDate(latestLog.completedAt)}` : 'No logs yet'}</span>
       </div>
     </article>
@@ -199,6 +201,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const [profile, setProfile] = useState(null);
   const [profileForm, setProfileForm] = useState({ displayName: '' });
@@ -866,6 +869,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
           {dashboard?.medicalDisclaimer ||
             'This tool supports developmental screening and monitoring only. It does not provide a medical diagnosis.'}
         </section>
+        {renderConsentCard()}
         {renderMlStatusCard()}
         <section className="card overview-workspace-card">
           <div className="overview-tab-strip" role="tablist" aria-label="Workspace shortcuts">
@@ -1166,169 +1170,59 @@ export default function DashboardPage({ initialTab = 'overview' }) {
 
   function renderActivitiesTab() {
     const domainCoverage = Object.values(dashboard?.stats?.domainTotals || {}).filter((value) => Number(value) > 0).length;
-    const activityStats = [
-      {
-        label: 'Readiness',
-        value: `${readinessScore}%`,
-        detail: 'Based on logs, coverage, and report history.'
-      },
-      {
-        label: 'Coverage',
-        value: `${domainCoverage}/4`,
-        detail: 'Domains with activity in the last 30 days.'
-      },
-      {
-        label: 'Auto-log',
-        value: 'On',
-        detail: 'Every completed game writes a log automatically.'
-      }
-    ];
-    const activityGuides = [
-      {
-        title: 'Cleaner than a crowded game catalog',
-        detail: 'Less noise. One focused game, one consistent card style, and no manual logging form.',
-        icon: <SparkleIcon />
-      },
-      {
-        title: 'Clearer signals',
-        detail: 'Age bands, log history, and focus metrics are visible without extra scrolling.',
-        icon: <CheckIcon />
-      },
-      {
-        title: 'Faster completion',
-        detail: 'Each game routes to its own dedicated screen and saves the result on finish.',
-        icon: <ArrowRightIcon />
-      }
-    ];
 
     return (
       <div className="tab-panel activities-panel">
-        <section className="activities-top-grid">
-          <article className="card activities-hero-card">
-            <div className="activities-hero-copy">
-              <p className="eyebrow">Brain Games</p>
-              <h2>Four polished games. One calm auto-log flow.</h2>
-              <p>
-                Pick a child, launch a game, and the result saves itself. This keeps the page cleaner, faster, and easier to use than a crowded catalog.
-              </p>
-              <div className="brain-lab-actions">
-                <button className="primary-btn" type="button" onClick={() => setActiveTab('children')}>
-                  Select a child first
-                </button>
-                <button className="secondary-btn" type="button" onClick={() => setActiveTab('activities')}>
-                  Browse all games
-                </button>
-              </div>
-              <div className="activities-feature-list">
-                <div className="activities-feature-row">
-                  <span className="activities-feature-icon" aria-hidden="true">
-                    <GridIcon />
-                  </span>
-                  <span>Age-matched</span>
-                </div>
-                <div className="activities-feature-row">
-                  <span className="activities-feature-icon" aria-hidden="true">
-                    <ChildIcon />
-                  </span>
-                  <span>4 developmental domains</span>
-                </div>
-                <div className="activities-feature-row">
-                  <span className="activities-feature-icon" aria-hidden="true">
-                    <ClipboardIcon />
-                  </span>
-                  <span>Auto-log completion</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="activities-hero-rail">
-              <div className="activities-hero-graphic" aria-hidden="true">
-                <GraphIcon />
-              </div>
-              <div className="activities-stat-stack">
-                {activityStats.map((item) => (
-                  <div className="activities-stat-card" key={item.label}>
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                    <p>{item.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </article>
-
-          <article className="card activities-empty-card">
-            <div className="activities-empty-badge" aria-hidden="true">
-              <UserIcon />
-            </div>
-            <h2>No child selected</h2>
-            <p>Create or select a child in the Children tab to unlock the age-matched games.</p>
-            <button className="primary-btn" type="button" onClick={() => setActiveTab('children')}>
-              Go to Children
-            </button>
-          </article>
+        <section className="card activities-catalog-header">
+          <div>
+            <p className="eyebrow">Guided activities</p>
+            <h2>{selectedChild ? `Choose a game for ${selectedChild.nickname}` : 'Choose a child to begin'}</h2>
+            <p>
+              Four age-matched activities cover cognitive, motor, language, and social-emotional development.
+              Completed games are logged automatically.
+            </p>
+          </div>
+          <div className="activities-catalog-stats" aria-label="Activity readiness">
+            <div className="activities-stat-card"><span>Age</span><strong>{selectedChild ? `${selectedChild.ageInMonths}m` : '—'}</strong></div>
+            <div className="activities-stat-card"><span>Coverage</span><strong>{domainCoverage}/4</strong></div>
+            <div className="activities-stat-card"><span>Readiness</span><strong>{readinessScore}%</strong></div>
+          </div>
         </section>
 
-        <section className="card activities-workflow-card" id="activities-workflow">
-          <div className="activities-workflow-tabs" role="tablist" aria-label="Activity sections">
-            <button className="activities-workflow-tab active" type="button">
-              Open Activities
-            </button>
-            <button className="activities-workflow-tab" type="button">
-              Why it feels better
-            </button>
-          </div>
+        {!selectedChild && (
+          <section className="card activities-empty-card">
+            <div className="activities-empty-badge" aria-hidden="true"><UserIcon /></div>
+            <h2>No child selected</h2>
+            <p>Create or select a child profile to unlock age-matched games.</p>
+            <button className="primary-btn" type="button" onClick={() => setActiveTab('children')}>Go to Children</button>
+          </section>
+        )}
 
-          <div className="activities-workflow-grid">
-            <div className="activities-workflow-left">
-              <div className="section-title-row">
-                <span className="section-icon" aria-hidden="true">
-                  <ActivityIcon />
-                </span>
-                <div>
-                  <p className="eyebrow">Selected child</p>
-                  <h2>{selectedChild ? selectedChild.nickname : 'No child selected'}</h2>
-                  <p>Launch a game, then the result saves itself with a clean parent-only flow.</p>
-                </div>
+        {selectedChild && requiresConsent && renderConsentCard()}
+
+        {selectedChild && (
+          <section aria-labelledby="activity-catalog-title">
+            <div className="section-heading-row activity-catalog-title-row">
+              <div>
+                <p className="eyebrow">Activity catalog</p>
+                <h2 id="activity-catalog-title">Four developmental games</h2>
               </div>
-
-              <div className="activity-choice-row">
-                <button className="activity-choice" type="button">
-                  Browse all games
-                </button>
-                <button className="activity-choice" type="button">
-                  Browse all games
-                </button>
-                <button className="activity-choice" type="button">
-                  Browse all games
-                </button>
-              </div>
-
-              <label className="activity-band-field">
-                <span>Age band</span>
-                <div className="activity-band-select">
-                  <strong>{selectedChild ? `${selectedChild.ageInMonths} months` : 'Select a child first'}</strong>
-                  <ChevronDownIcon />
-                </div>
-              </label>
+              <p className="section-helper-text">Select one game. The result saves automatically after completion.</p>
             </div>
-
-            <div className="activities-workflow-right">
-              <div className="activities-workflow-kicker">Why it feels better</div>
-              {activityGuides.map((item) => (
-                <article className="activities-reason-card" key={item.title}>
-                  <div className="activities-reason-icon" aria-hidden="true">
-                    {item.icon}
-                  </div>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <p>{item.detail}</p>
-                  </div>
-                </article>
+            <div className="activity-card-grid">
+              {domainOrder.map((domain) => (
+                <GameLaunchCard
+                  key={domain}
+                  activity={activitiesByDomain[domain]}
+                  domain={domain}
+                  latestLog={logsByDomain[domain]}
+                  child={selectedChild}
+                  locked={requiresConsent}
+                />
               ))}
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </div>
     );
   }
@@ -1950,7 +1844,16 @@ export default function DashboardPage({ initialTab = 'overview' }) {
   return (
     <main className="dashboard-shell">
       <div className="dashboard-layout">
-        <aside className="dashboard-sidebar card">
+        <button
+          className={`mobile-nav-backdrop ${mobileNavOpen ? 'mobile-nav-backdrop-open' : ''}`}
+          type="button"
+          aria-label="Close navigation menu"
+          onClick={() => setMobileNavOpen(false)}
+        />
+        <aside
+          id="dashboard-navigation"
+          className={`dashboard-sidebar card ${mobileNavOpen ? 'dashboard-sidebar-open' : ''}`}
+        >
           <BrandLockup compact className="sidebar-brand-lockup" />
           <nav className="sidebar-nav" aria-label="Dashboard sections">
             {tabs.map((tab) => (
@@ -1958,7 +1861,10 @@ export default function DashboardPage({ initialTab = 'overview' }) {
                 key={tab.id}
                 type="button"
                 className={`sidebar-nav-item ${activeTab === tab.id ? 'sidebar-nav-item-active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setMobileNavOpen(false);
+                }}
               >
                 <span className="nav-icon" aria-hidden="true">
                   <tab.icon />
@@ -1978,6 +1884,21 @@ export default function DashboardPage({ initialTab = 'overview' }) {
         </aside>
 
         <section className="dashboard-main">
+          <div className="mobile-appbar card">
+            <BrandLockup compact />
+            <button
+              className="mobile-nav-toggle"
+              type="button"
+              aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileNavOpen}
+              aria-controls="dashboard-navigation"
+              onClick={() => setMobileNavOpen((current) => !current)}
+            >
+              <span aria-hidden="true" />
+              <span aria-hidden="true" />
+              <span aria-hidden="true" />
+            </button>
+          </div>
           <header className="topbar card">
             <div>
               <p className="eyebrow">Focused workspace</p>
@@ -1989,7 +1910,12 @@ export default function DashboardPage({ initialTab = 'overview' }) {
                 Open Activities
               </button>
               <ThemeToggleButton theme={theme} onClick={toggleTheme} />
-              <button className="notification-btn" type="button" aria-label="Notifications">
+              <button
+                className="notification-btn"
+                type="button"
+                aria-label="Notifications"
+                onClick={() => setActionMessage("You're all caught up. No new notifications.")}
+              >
                 <BellIcon />
               </button>
             </div>

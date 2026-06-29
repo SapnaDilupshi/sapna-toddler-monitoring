@@ -3,12 +3,10 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { BrandLockup, ThemeToggleButton } from '../components/BrandControls';
 import {
-  ClipboardIcon,
   EyeIcon,
   EyeOffIcon,
   LockIcon,
   MailIcon,
-  ProfileIcon,
   ShieldIcon,
   UserIcon
 } from '../components/icons';
@@ -24,6 +22,17 @@ function FieldShell({ icon, children, button }) {
     </div>
   );
 }
+
+const authContent = {
+  login: {
+    title: 'Welcome Back!',
+    description: 'Login to access your dashboard.'
+  },
+  signup: {
+    title: 'Create your account',
+    description: "Join and start your toddler's development journey."
+  }
+};
 
 export default function AuthPage() {
   const { login, signup, resetPassword, configError } = useAuth();
@@ -103,20 +112,7 @@ export default function AuthPage() {
     }
   }
 
-  const heroFacts = [
-    {
-      icon: <ClipboardIcon />,
-      text: 'Guided activities mapped to 12-36 month milestones'
-    },
-    {
-      icon: <ProfileIcon />,
-      text: 'Consent-driven and parent-mediated data collection'
-    },
-    {
-      icon: <ShieldIcon />,
-      text: 'Rule-based weekly screening summaries with safety disclaimers'
-    }
-  ];
+  const authCopy = authContent[mode];
 
   return (
     <main className="app-shell auth-shell">
@@ -126,7 +122,6 @@ export default function AuthPage() {
       </section>
 
       <section className="hero-card">
-        <div className="hero-pill">Parent-Centric Monitoring</div>
         <h1>Toddler Development Dashboard</h1>
         <p>
           Track offline milestone activities, log developmental observations, and receive
@@ -143,16 +138,6 @@ export default function AuthPage() {
               qualified healthcare professional for formal assessment.
             </p>
           </div>
-        </div>
-        <div className="hero-fact-stack">
-          {heroFacts.map((fact, index) => (
-            <div className="hero-fact" key={fact.text} style={{ marginLeft: `${index * 42}px` }}>
-              <span className="hero-fact-icon" aria-hidden="true">
-                {fact.icon}
-              </span>
-              <span>{fact.text}</span>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -174,12 +159,15 @@ export default function AuthPage() {
           </button>
         </div>
 
-        <div className="auth-hero-icon" aria-hidden="true">
-          {mode === 'login' ? <LockIcon /> : <UserIcon />}
+        <div className="auth-card-header">
+          <div className="auth-hero-icon" aria-hidden="true">
+            {mode === 'login' ? <LockIcon /> : <UserIcon />}
+          </div>
+          <div className="auth-copy">
+            <h2>{authCopy.title}</h2>
+            <p>{authCopy.description}</p>
+          </div>
         </div>
-
-        <h2>{mode === 'login' ? 'Welcome Back!' : 'Create your account'}</h2>
-        <p>{mode === 'login' ? 'Login to access your dashboard' : "Join and start your toddler's development journey."}</p>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <label className="field-label">

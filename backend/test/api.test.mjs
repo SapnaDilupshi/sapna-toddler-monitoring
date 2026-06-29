@@ -78,6 +78,14 @@ const DeletedAccount = mongoose.model('DeletedAccount');
 const { seedDemoForEmail } = require('../src/scripts/seedDemo.js');
 
 let mongoServer;
+let usingExternalTestMongo = false;
+
+function assertSafeTestMongoUri(uri) {
+  const dbName = new URL(uri).pathname.replace(/^\//, '');
+  if (!/(test|codex)/i.test(dbName)) {
+    throw new Error('TEST_MONGODB_URI must point to a test database.');
+  }
+}
 
 function authRequest(token = 'token-main') {
   const payload = tokenToPayload[token];
@@ -93,8 +101,15 @@ function authRequest(token = 'token-main') {
 describe('API compliance and privacy flows', () => {
   beforeAll(async () => {
     initializeFirebase();
-    mongoServer = await MongoMemoryServer.create();
-    await mongoose.connect(mongoServer.getUri(), {
+    const testMongoUri = process.env.TEST_MONGODB_URI;
+    if (testMongoUri) {
+      assertSafeTestMongoUri(testMongoUri);
+      usingExternalTestMongo = true;
+    } else {
+      mongoServer = await MongoMemoryServer.create();
+    }
+
+    await mongoose.connect(testMongoUri || mongoServer.getUri(), {
       serverSelectionTimeoutMS: 5000
     });
   });
@@ -120,6 +135,9 @@ describe('API compliance and privacy flows', () => {
 
   afterAll(async () => {
     if (mongoose.connection.readyState !== 0) {
+      if (usingExternalTestMongo) {
+        await mongoose.connection.dropDatabase();
+      }
       await mongoose.connection.close();
     }
     if (mongoServer) {

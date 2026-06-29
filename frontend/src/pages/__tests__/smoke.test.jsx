@@ -389,13 +389,28 @@ describe('frontend smoke flows', () => {
     expect(screen.getByText(/Model Online/i)).toBeInTheDocument();
   });
 
-  it('keeps the new dashboard viewport free of the retired consent panel', async () => {
+  it('requires both consent acknowledgments before enabling protected workflows', async () => {
     apiRequestMock.mockImplementation(buildDashboardApiMock({ consentAccepted: false }));
     render(<DashboardPage />);
 
-    expect(screen.queryByText(/Parental Consent Required/i)).not.toBeInTheDocument();
+    expect(await screen.findByText(/Parental Consent Required/i)).toBeInTheDocument();
     await openTab(/^Reports$/i);
     expect(screen.getByRole('button', { name: /Generate Weekly Report/i })).toBeDisabled();
+
+    await openTab(/^Overview$/i);
+    await userEvent.click(screen.getByLabelText(/screening and monitoring aid/i));
+    await userEvent.click(screen.getByLabelText(/secure storage and processing/i));
+    await userEvent.click(screen.getByRole('button', { name: /I Accept Consent Terms/i }));
+
+    await waitFor(() => {
+      expect(apiRequestMock).toHaveBeenCalledWith(
+        '/consent',
+        expect.objectContaining({
+          method: 'POST',
+          body: { acknowledgedScreeningOnly: true, acknowledgedDataUse: true }
+        })
+      );
+    });
   });
 
   it('supports happy-path actions, profile, settings, and about content', async () => {
@@ -409,11 +424,11 @@ describe('frontend smoke flows', () => {
     expect(screen.getByText(/Summary text/i)).toBeInTheDocument();
 
     await openTab(/^Activities$/i);
-    expect(await screen.findByText(/Four polished games/i)).toBeInTheDocument();
-    expect(screen.getByText(/One calm auto-log flow/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Browse all games/i })).toHaveLength(4);
-    expect(screen.getByText(/No child selected/i)).toBeInTheDocument();
-    expect(screen.getByText(/^Age band$/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Choose a game for Ari/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Play Cognitive game/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Play Motor game/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Play Language game/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Play Social-emotional game/i })).toBeInTheDocument();
 
     await openTab(/^Children$/i);
     expect(screen.queryByText(/Log Offline Activity/i)).not.toBeInTheDocument();

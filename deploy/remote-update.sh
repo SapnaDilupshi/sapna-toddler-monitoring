@@ -32,6 +32,24 @@ ensure_env_var "$BACKEND_ENV_FILE" "ML_HEALTH_TIMEOUT_MS" "600"
 ensure_env_var "$BACKEND_ENV_FILE" "ML_CONFIDENCE_THRESHOLD" "0.55"
 ensure_env_var "$BACKEND_ENV_FILE" "RULE_ENGINE_VERSION" "sapna-rules-v1"
 
+wait_for_http() {
+  local label="$1"
+  local url="$2"
+  local expected="$3"
+  local attempts="${4:-30}"
+
+  for _ in $(seq 1 "$attempts"); do
+    if curl -fsS "$url" 2>/dev/null | grep -q "$expected"; then
+      echo "$label is healthy"
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "$label did not become healthy in time"
+  return 1
+}
+
 cd "$APP_ROOT/ml-service"
 python3 -m venv venv
 ./venv/bin/python -m pip install --upgrade pip
@@ -39,8 +57,10 @@ python3 -m venv venv
 
 cd "$APP_ROOT/backend"
 npm ci --omit=dev
-pm2 startOrReload ecosystem.config.cjs --only sapna-toddler-api
 pm2 startOrReload ecosystem.config.cjs --only sapna-ml-api
+wait_for_http "ML service" "http://127.0.0.1:8010/health" '"ok":true'
+pm2 startOrReload ecosystem.config.cjs --only sapna-toddler-api
+wait_for_http "Backend API" "http://127.0.0.1:3010/api/health" '"mlServiceReachable":true'
 pm2 save
 
 cd "$APP_ROOT/frontend"

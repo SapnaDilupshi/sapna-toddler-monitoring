@@ -4,7 +4,6 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
 import App from './App';
-import './styles/global.css';
 import './styles/tinysteps.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
