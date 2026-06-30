@@ -36,7 +36,7 @@ flowchart LR
 ## Tech Stack
 
 - Frontend: React + Vite + Firebase Web SDK
-- Backend: Node.js + Express + Mongoose
+- Backend: Node.js 22 + Express + Mongoose
 - ML Service: Python 3.9 + FastAPI + scikit-learn
 - Auth: Firebase ID tokens + backend verification
 - Database: MongoDB Atlas
@@ -191,12 +191,16 @@ Frontend env (`frontend/.env`):
 
 ## MongoDB Setup
 
-Production now uses MongoDB running locally on the EC2 host.
+Production uses the configured MongoDB Atlas cluster.
 
-- EC2 backend `.env` should point `MONGODB_URI` to the local Mongo instance on that server
+- EC2 backend `.env` should point `MONGODB_URI` to the production Atlas database
 - Local development can use any MongoDB URI or the in-memory fallback during tests
 
 ## Deployment (Shared EC2, Domain-Isolated)
+
+The SAPNA PM2 process requires Node.js 22 at `/usr/bin/node-22` and npm at
+`/usr/bin/npm-22`. The shared host can keep its default Node version for other
+applications because SAPNA sets an explicit interpreter.
 
 ```bash
 ./deploy/deploy-to-ec2.sh
@@ -204,6 +208,7 @@ Production now uses MongoDB running locally on the EC2 host.
 
 Script actions:
 
+- create a timestamped production database/source/PM2 backup when the remote backup helper is available
 - sync repo to `/home/ec2-user/sapna-toddler-monitoring`
 - install backend/frontend dependencies
 - install/update ML sidecar virtualenv + requirements

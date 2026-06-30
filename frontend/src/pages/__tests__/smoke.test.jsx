@@ -30,7 +30,17 @@ vi.mock('../../hooks/useTheme', () => ({
   })
 }));
 
-function buildDashboardApiMock({ consentAccepted, role = 'parent' }) {
+function buildDashboardApiMock({
+  consentAccepted,
+  role = 'parent',
+  mlHealth = {
+    ok: true,
+    mlServiceReachable: true,
+    mlModelName: 'random_forest',
+    mlModelVersion: 'sapna-ml-test',
+    mlServiceEnabled: true
+  }
+}) {
   const state = {
     consentAccepted,
     acknowledgedScreeningOnly: consentAccepted,
@@ -95,12 +105,7 @@ function buildDashboardApiMock({ consentAccepted, role = 'parent' }) {
 
   return async (path, { method = 'GET' } = {}) => {
     if (path === '/health') {
-      return {
-        ok: true,
-        mlServiceReachable: true,
-        mlModelVersion: 'sapna-ml-test',
-        mlServiceEnabled: true
-      };
+      return mlHealth;
     }
     if (path === '/auth/me' && method === 'GET') {
       return { parent: state.parent };
@@ -385,8 +390,44 @@ describe('frontend smoke flows', () => {
     expect(within(sidebar).getByRole('button', { name: /^Profile$/i })).toBeInTheDocument();
     expect(within(sidebar).getByRole('button', { name: /^Settings$/i })).toBeInTheDocument();
     expect(within(sidebar).getByRole('button', { name: /^About$/i })).toBeInTheDocument();
+    expect(within(sidebar).queryByRole('button', { name: /^Attendee Insights$/i })).not.toBeInTheDocument();
     expect(within(sidebar).queryByRole('button', { name: /^Admin$/i })).not.toBeInTheDocument();
     expect(screen.getByText(/Model Online/i)).toBeInTheDocument();
+  });
+
+  it('shows the rules fallback when the trained ML model is unavailable', async () => {
+    apiRequestMock.mockImplementation(
+      buildDashboardApiMock({
+        consentAccepted: true,
+        mlHealth: {
+          ok: true,
+          mlServiceReachable: true,
+          mlModelName: 'fallback_rule_engine',
+          mlModelVersion: 'sapna-rules-v1',
+          mlServiceEnabled: true
+        }
+      })
+    );
+    render(<DashboardPage />);
+
+    expect(await screen.findByText('Rules Fallback Active')).toBeInTheDocument();
+    expect(screen.getByText('Fallback Ready')).toBeInTheDocument();
+    expect(screen.queryByText('ML Online')).not.toBeInTheDocument();
+  });
+
+  it('shows the rules fallback when the health request fails', async () => {
+    const baseApiMock = buildDashboardApiMock({ consentAccepted: true });
+    apiRequestMock.mockImplementation((path, options) => {
+      if (path === '/health') {
+        throw new TypeError('Failed to fetch');
+      }
+      return baseApiMock(path, options);
+    });
+    render(<DashboardPage />);
+
+    expect(await screen.findByText('Rules Fallback Active')).toBeInTheDocument();
+    expect(screen.getByText('Fallback Ready')).toBeInTheDocument();
+    expect(screen.queryByText('ML Online')).not.toBeInTheDocument();
   });
 
   it('requires both consent acknowledgments before enabling protected workflows', async () => {
@@ -456,6 +497,7 @@ describe('frontend smoke flows', () => {
 
     await openTab(/^Reports$/i);
     await userEvent.click(screen.getByRole('button', { name: /Generate Weekly Report/i }));
+    expect(await screen.findByText(/Weekly report generated/i)).toBeInTheDocument();
 
     await openTab(/^Insights$/i);
     expect(screen.getByText(/Readiness Score/i)).toBeInTheDocument();
@@ -499,6 +541,7 @@ describe('frontend smoke flows', () => {
     await openTab(/^About$/i);
     expect(screen.getByText(/Parent-mediated toddler monitoring/i)).toBeInTheDocument();
     expect(screen.getByText(/ML Methodology/i)).toBeInTheDocument();
+    expect(screen.getByText(/proposal-aligned synthetic data/i)).toBeInTheDocument();
   });
 
   it('opens the cognitive game in a dedicated page and auto-logs on completion', async () => {

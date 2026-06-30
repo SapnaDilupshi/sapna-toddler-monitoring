@@ -150,6 +150,7 @@ describe('API compliance and privacy flows', () => {
     expect(health.status).toBe(200);
     expect(health.body.ok).toBe(true);
     expect(health.body.mlServiceReachable).toBe(false);
+    expect(health.body.mlModelName).toBeNull();
 
     const me = await authRequest().get('/api/auth/me');
     expect(me.status).toBe(200);
@@ -595,6 +596,7 @@ describe('API compliance and privacy flows', () => {
           ok: true,
           json: async () => ({
             ok: true,
+            modelName: 'random_forest',
             modelVersion: 'sapna-ml-test'
           })
         };
@@ -643,6 +645,7 @@ describe('API compliance and privacy flows', () => {
     const healthRes = await request(app).get('/api/health');
     expect(healthRes.status).toBe(200);
     expect(healthRes.body.mlServiceReachable).toBe(true);
+    expect(healthRes.body.mlModelName).toBe('random_forest');
     expect(healthRes.body.mlModelVersion).toBe('sapna-ml-test');
   });
 

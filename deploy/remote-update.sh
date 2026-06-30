@@ -5,9 +5,16 @@ APP_ROOT="/home/ec2-user/sapna-toddler-monitoring"
 WWW_ROOT="/var/www/sapna.minadadehiwala.com"
 NGINX_CONF_NAME="sapna.minadadehiwala.com.conf"
 BACKEND_ENV_FILE="$APP_ROOT/backend/.env"
+NODE_BIN="${SAPNA_NODE_INTERPRETER:-/usr/bin/node-22}"
+NPM_BIN="${SAPNA_NPM_BIN:-/usr/bin/npm-22}"
 
 if [[ ! -d "$APP_ROOT" ]]; then
   echo "Missing app root: $APP_ROOT"
+  exit 1
+fi
+
+if [[ ! -x "$NODE_BIN" || ! -x "$NPM_BIN" ]]; then
+  echo "SAPNA requires Node.js 22 and npm 22 binaries at $NODE_BIN and $NPM_BIN"
   exit 1
 fi
 
@@ -56,19 +63,20 @@ python3 -m venv venv
 ./venv/bin/python -m pip install -r requirements.txt
 
 cd "$APP_ROOT/backend"
-npm ci --omit=dev
+"$NPM_BIN" ci --omit=dev --no-audit
+EXPECTED_MODEL_VERSION="$(tr -d '\r\n' < "$APP_ROOT/ml-service/artifacts/production/model_version.txt")"
 pm2 startOrReload ecosystem.config.cjs --only sapna-ml-api
-wait_for_http "ML service" "http://127.0.0.1:8010/health" '"ok":true'
-pm2 startOrReload ecosystem.config.cjs --only sapna-toddler-api
-wait_for_http "Backend API" "http://127.0.0.1:3010/api/health" '"mlServiceReachable":true'
+wait_for_http "ML service" "http://127.0.0.1:8010/health" "\"modelVersion\":\"$EXPECTED_MODEL_VERSION\"" 90
+SAPNA_NODE_INTERPRETER="$NODE_BIN" pm2 startOrReload ecosystem.config.cjs --only sapna-toddler-api
+wait_for_http "Backend API" "http://127.0.0.1:3010/api/health" "\"mlModelVersion\":\"$EXPECTED_MODEL_VERSION\"" 45
 pm2 save
 
 cd "$APP_ROOT/frontend"
 if [[ -f dist/index.html ]]; then
   echo "Using synced local frontend build"
 else
-  npm ci
-  npm run build
+  "$NPM_BIN" ci --no-audit
+  "$NPM_BIN" run build
 fi
 
 sudo mkdir -p "$WWW_ROOT"

@@ -5,7 +5,6 @@ import { useTheme } from '../hooks/useTheme';
 import { BrandLockup, ThemeToggleButton } from '../components/BrandControls';
 import {
   ActivityIcon,
-  AttendeeIcon,
   BellIcon,
   ChildIcon,
   ClockIcon,
@@ -53,6 +52,18 @@ const domainLabels = {
 };
 
 const domainOrder = ['cognitive', 'motor', 'language', 'social_emotional'];
+
+function hasTrainedMlModel(health) {
+  if (!health?.mlServiceReachable) {
+    return false;
+  }
+
+  if (health.mlModelName) {
+    return health.mlModelName !== 'fallback_rule_engine';
+  }
+
+  return Boolean(health.mlModelVersion && !health.mlModelVersion.startsWith('sapna-rules-'));
+}
 
 function getLatestDomainLog(logs, domain) {
   return logs.find((log) => log.activityId?.domain === domain) || null;
@@ -168,7 +179,6 @@ const baseTabs = [
   { id: 'activities', label: 'Activities', icon: ActivityIcon },
   { id: 'reports', label: 'Reports', icon: ReportIcon },
   { id: 'insights', label: 'Insights', icon: InsightsIcon },
-  { id: 'attendee-insights', label: 'Attendee Insights', icon: AttendeeIcon },
   { id: 'profile', label: 'Profile', icon: ProfileIcon },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
   { id: 'about', label: 'About', icon: InfoIcon }
@@ -232,6 +242,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
   const [childEditForm, setChildEditForm] = useState({ nickname: '', dateOfBirth: '', sex: '' });
 
   const isAdmin = profile?.role === 'admin';
+  const trainedMlModelOnline = hasTrainedMlModel(mlHealth);
   const tabs = isAdmin ? [...baseTabs, { id: 'admin', label: 'Admin', icon: ShieldIcon }] : baseTabs;
   const selectedChild = useMemo(
     () => children.find((item) => item._id === selectedChildId) || null,
@@ -290,19 +301,13 @@ export default function DashboardPage({ initialTab = 'overview' }) {
   async function loadMlHealth() {
     try {
       const healthData = await apiRequest('/health');
-      setMlHealth(
-        healthData?.mlServiceReachable
-          ? healthData
-          : {
-              mlServiceReachable: true,
-              mlModelVersion: 'sapna-ml-test',
-              mlServiceEnabled: true
-            }
-      );
+      setMlHealth(healthData);
     } catch {
       setMlHealth({
-        mlServiceReachable: true,
-        mlModelVersion: 'sapna-ml-test',
+        ok: false,
+        mlServiceReachable: false,
+        mlModelName: null,
+        mlModelVersion: null,
         mlServiceEnabled: true
       });
     }
@@ -348,7 +353,6 @@ export default function DashboardPage({ initialTab = 'overview' }) {
     }
 
     setError('');
-    setActionMessage('');
     try {
       const [activityData, dashboardData] = await Promise.all([
         callApi(`/activities?childId=${childId}`),
@@ -402,6 +406,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
   }, []);
 
   useEffect(() => {
+    setActionMessage('');
     loadChildData(selectedChildId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChildId]);
@@ -749,7 +754,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
       <section className="card ml-status-card">
         <div>
           <p className="eyebrow">ML Screening Engine</p>
-          <h2>{mlHealth?.mlServiceReachable ? 'Model Online' : 'Rules Fallback Active'}</h2>
+          <h2>{trainedMlModelOnline ? 'Model Online' : 'Rules Fallback Active'}</h2>
           <p>
             Weekly reports use the deployed ML model when confidence is high enough, then fall back
             to the transparent rules engine when needed.
@@ -758,10 +763,10 @@ export default function DashboardPage({ initialTab = 'overview' }) {
         <div className="ml-status-pill-wrap">
           <span
             className={`ml-status-pill ${
-              mlHealth?.mlServiceReachable ? 'ml-status-online' : 'ml-status-fallback'
+              trainedMlModelOnline ? 'ml-status-online' : 'ml-status-fallback'
             }`}
           >
-            {mlHealth?.mlServiceReachable ? 'ML Online' : 'Fallback Ready'}
+            {trainedMlModelOnline ? 'ML Online' : 'Fallback Ready'}
           </span>
           <span className="ml-version-text">
             {mlHealth?.mlModelVersion || 'Model version checking...'}
@@ -1587,7 +1592,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
             </div>
             <div className="stat-box">
               <span>ML</span>
-              <strong>{mlHealth?.mlServiceReachable ? 'Online' : 'Fallback'}</strong>
+              <strong>{trainedMlModelOnline ? 'Online' : 'Fallback'}</strong>
             </div>
           </div>
         </article>
@@ -1627,6 +1632,9 @@ export default function DashboardPage({ initialTab = 'overview' }) {
           </div>
           <p>
             Weekly reports use age-normalized log features, a compact Random Forest model selected from RF/SVM/Hybrid RF evaluation, and a rules fallback when confidence is low.
+          </p>
+          <p>
+            The current research model was trained and evaluated on proposal-aligned synthetic data and has not been clinically validated.
           </p>
           <p>
             TinySteps does not provide clinical diagnosis. Parents should consult qualified healthcare professionals for formal assessment.
@@ -1701,7 +1709,7 @@ export default function DashboardPage({ initialTab = 'overview' }) {
               <div className="stat-box"><span>Logs</span><strong>{adminSummary.logs}</strong></div>
               <div className="stat-box"><span>Reports</span><strong>{adminSummary.reports}</strong></div>
               <div className="stat-box"><span>Recent Logs</span><strong>{adminSummary.recentLogs}</strong></div>
-              <div className="stat-box"><span>ML</span><strong>{adminSummary.mlHealth?.mlServiceReachable ? 'Online' : 'Fallback'}</strong></div>
+              <div className="stat-box"><span>ML</span><strong>{hasTrainedMlModel(adminSummary.mlHealth) ? 'Online' : 'Fallback'}</strong></div>
             </div>
           )}
         </section>
@@ -1833,7 +1841,6 @@ export default function DashboardPage({ initialTab = 'overview' }) {
     if (activeTab === 'activities') return renderActivitiesTab();
     if (activeTab === 'reports') return renderReportsTab();
     if (activeTab === 'insights') return renderInsightsTab();
-    if (activeTab === 'attendee-insights') return renderInsightsTab();
     if (activeTab === 'profile') return renderProfileTab();
     if (activeTab === 'settings') return renderSettingsTab();
     if (activeTab === 'about') return renderAboutTab();

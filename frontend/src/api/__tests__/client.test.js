@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { apiRequest } from '../client';
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -42,6 +43,32 @@ describe('apiRequest', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(apiRequest('/children')).rejects.toThrow('Unable to reach TinySteps. Check your connection and try again.');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('times out a stalled GET after one safe retry', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((url, { signal }) => {
+      return new Promise((resolve, reject) => {
+        signal.addEventListener(
+          'abort',
+          () => {
+            const error = new Error('Aborted');
+            error.name = 'AbortError';
+            reject(error);
+          },
+          { once: true }
+        );
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const expectation = expect(apiRequest('/health')).rejects.toThrow(
+      'The request timed out. Check your connection and try again.'
+    );
+    await vi.advanceTimersByTimeAsync(24_001);
+
+    await expectation;
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

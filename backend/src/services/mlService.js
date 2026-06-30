@@ -51,6 +51,7 @@ async function getMlHealth() {
   if (!isMlEnabled()) {
     return {
       mlServiceReachable: false,
+      mlModelName: null,
       mlModelVersion: null,
       mlServiceEnabled: false
     };
@@ -60,12 +61,14 @@ async function getMlHealth() {
     const payload = await fetchWithTimeout('/health', { method: 'GET' }, env.mlHealthTimeoutMs);
     return {
       mlServiceReachable: Boolean(payload.ok),
+      mlModelName: payload.modelName || null,
       mlModelVersion: payload.modelVersion || null,
       mlServiceEnabled: true
     };
   } catch (error) {
     return {
       mlServiceReachable: false,
+      mlModelName: null,
       mlModelVersion: null,
       mlServiceEnabled: true,
       mlError: error.message

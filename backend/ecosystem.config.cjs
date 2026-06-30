@@ -4,6 +4,7 @@ module.exports = {
       name: 'sapna-toddler-api',
       script: 'src/server.js',
       cwd: '/home/ec2-user/sapna-toddler-monitoring/backend',
+      interpreter: process.env.SAPNA_NODE_INTERPRETER || 'node',
       instances: 1,
       exec_mode: 'fork',
       max_memory_restart: '320M',
