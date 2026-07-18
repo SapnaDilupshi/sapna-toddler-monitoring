@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '../hooks/useTheme';
-import { BrandLockup, ThemeToggleButton } from '../components/BrandControls';
+import { BrandLockup } from '../components/BrandControls';
 import {
   EyeIcon,
   EyeOffIcon,
@@ -36,7 +35,6 @@ const authContent = {
 
 export default function AuthPage() {
   const { login, signup, resetPassword, configError } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ email: '', password: '', confirmPassword: '' });
   const [pending, setPending] = useState(false);
@@ -118,7 +116,6 @@ export default function AuthPage() {
     <main className="app-shell auth-shell">
       <section className="auth-topbar">
         <BrandLockup subtitle="Parent-Centric Monitoring" className="auth-brand-lockup" />
-        <ThemeToggleButton theme={theme} onClick={toggleTheme} className="auth-theme-toggle" />
       </section>
 
       <section className="hero-card">

@@ -1916,7 +1916,6 @@ export default function DashboardPage({ initialTab = 'overview' }) {
               <button className="primary-btn" type="button" onClick={() => setActiveTab('activities')}>
                 Open Activities
               </button>
-              <ThemeToggleButton theme={theme} onClick={toggleTheme} />
               <button
                 className="notification-btn"
                 type="button"
