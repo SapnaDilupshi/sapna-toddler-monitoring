@@ -72,7 +72,11 @@ wait_for_http "Backend API" "http://127.0.0.1:3010/api/health" "\"mlModelVersion
 pm2 save
 
 cd "$APP_ROOT/frontend"
-if [[ -f dist/index.html ]]; then
+if [[ -f .env ]]; then
+  echo "Building frontend on EC2 using the protected frontend env"
+  "$NPM_BIN" ci --no-audit
+  "$NPM_BIN" run build
+elif [[ -f dist/index.html ]]; then
   echo "Using synced local frontend build"
 else
   "$NPM_BIN" ci --no-audit
