@@ -57,6 +57,10 @@ wait_for_http() {
   return 1
 }
 
+build_frontend() {
+  "$NODE_BIN" "$APP_ROOT/frontend/node_modules/vite/bin/vite.js" build
+}
+
 cd "$APP_ROOT/ml-service"
 python3 -m venv venv
 ./venv/bin/python -m pip install --upgrade pip
@@ -75,12 +79,12 @@ cd "$APP_ROOT/frontend"
 if [[ -f .env ]]; then
   echo "Building frontend on EC2 using the protected frontend env"
   "$NPM_BIN" ci --no-audit
-  "$NPM_BIN" run build
+  build_frontend
 elif [[ -f dist/index.html ]]; then
   echo "Using synced local frontend build"
 else
   "$NPM_BIN" ci --no-audit
-  "$NPM_BIN" run build
+  build_frontend
 fi
 
 sudo mkdir -p "$WWW_ROOT"
